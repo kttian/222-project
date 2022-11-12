@@ -32,7 +32,7 @@ def load_dates():
                 date_dict[int(node)] = date 
     check_set(date_dict.keys(), G.nodes(data=False))
 
-def load_dataset(with_date=False, small=False):
+def load_dataset(with_date=False, small=-1):
     '''
     load in the cit-hep-ph dataset
     
@@ -45,15 +45,16 @@ def load_dataset(with_date=False, small=False):
     G = nx.read_edgelist('dataset/cit-HepPh.txt', create_using=nx.DiGraph(), 
                          comments='#', nodetype=int, data=True)
     
-    if small:
-        # only use the first 10 nodes, for fast debugging purposes 
-        G = G.subgraph(list(G.nodes)[:10])
+    if small > 0:
+        # only use the first 'small' number of nodes, for fast debugging purposes 
+        G = G.subgraph(list(G.nodes)[:small])
     
     if not with_date:
         # load graph without publication dates 
         return G, {}                  
     else:
         # load the publication dates
+        # and add date as a node attribute 
         with open('dataset/cit-HepPh-dates.txt') as f:
             for line in f:
                 if line[0] != '#': # ignore lines starting with #
@@ -61,6 +62,11 @@ def load_dataset(with_date=False, small=False):
                     # if node is in graph, add date attribute
                     if int(node) in G.nodes():
                         G.nodes[int(node)]['date'] = str(date)
+
+        # add date as edge attribute 
+        for u, v, d in G.edges(data=True):
+            if 'date' in G.nodes[v]:
+                d['date'] = G.nodes[v]['date']
 
         # get the start and end date
         date_list = [] 
@@ -104,5 +110,5 @@ if __name__ == '__main__':
     train_G = graph_subset(G, start_date='1992-01-01', end_date='1997-01-01')
     print("Num Nodes:", train_G.number_of_nodes(), "Num Edges:", train_G.number_of_edges())
 
-    test_G = graph_subset(G, start_date='1997-01-01', end_date='2002-12-31')
+    test_G = graph_subset(G, start_date='1992-01-01', end_date='2002-12-31')
     print("Num Nodes:", test_G.number_of_nodes(), "Num Edges:", test_G.number_of_edges())

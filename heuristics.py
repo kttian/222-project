@@ -18,18 +18,22 @@ meta approaches
 '''
 
 import networkx as nx
+import numpy as np 
 
-def graph_distance(G):
+def graph_distance(G, x, y):
     '''
     length of shortest path between x and y
     '''
-    return nx.shortest_path_length(G)
+    try:
+        return nx.shortest_path_length(G, source=x, target=y)
+    except:
+        return -1
 
-def common_neighbors(G):
+def common_neighbors(G, x, y):
     '''
     count number of common neighbors
     '''
-    return nx.common_neighbors(G)
+    return nx.common_neighbors(G, x, y)
 
 def jaccard_coefficient(G):
     '''

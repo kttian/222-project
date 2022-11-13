@@ -42,7 +42,7 @@ def load_dataset(with_date=False, small=-1):
     '''
     # load the edges into a directed graph (DiGraph)
     # TODO: add support for .gz files 
-    G = nx.read_edgelist('dataset/cit-HepPh.txt', create_using=nx.DiGraph(), 
+    G = nx.read_edgelist('dataset/cit-HepPh.txt', create_using=nx.DiGraph(),
                          comments='#', nodetype=int, data=True)
     
     if small > 0:
@@ -78,13 +78,32 @@ def load_dataset(with_date=False, small=-1):
         return G, {'start_date': start_date, 'end_date': end_date}
 
 def filter_graph(G):
-    # filter out nodes without date
+    """ Filter out nodes without dates.
+
+    :param G:
+    :return:
+    """
     return G.subgraph([n for n, d in G.nodes(data=True) if 'date' in d])
 
 def graph_subset(G, start_date, end_date):
     # create graph subset containing nodes with date before date 
     # alternate: consider G.remove_nodes_from
-    return G.subgraph([n for n, d in G.nodes(data=True) if (d['date'] >= start_date and d['date'] < end_date)])
+    return G.subgraph([n for n, d in G.nodes(data=True) if (start_date <= d['date'] < end_date)])
+
+
+def filter_prolific_authors(G, kappa=3):
+    """ Filter out authors who have at least written a minimum number of papers.
+
+    Liben-Nowell, David, and Jon Kleinberg. “The Link Prediction Problem for Social Networks.” In Proceedings of the
+    Twelfth International Conference on Information and Knowledge Management, 556–59. CIKM ’03.
+    New York, NY, USA: Association for Computing Machinery, 2003. https://doi.org/10.1145/956863.956972.
+.
+    :param G:
+    :param kappa:
+    :return:
+    """
+    return G.subgraph([n for n in G.nodes() if len(list(G.neighbors(n))) >= kappa])
+
 
 if __name__ == '__main__':
     # test loading dataset

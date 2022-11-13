@@ -17,8 +17,12 @@ meta approaches
 - clustering 
 '''
 
+import logging
+import time
+
 import networkx as nx
-import numpy as np 
+import numpy as np
+import scipy as sp
 
 def graph_distance(G, x, y):
     '''
@@ -29,11 +33,42 @@ def graph_distance(G, x, y):
     except:
         return -1
 
-def common_neighbors(G, x, y):
-    '''
-    count number of common neighbors
-    '''
-    return nx.common_neighbors(G, x, y)
+def common_neighbors(G, u, v):
+    """ Count the number of common neighbors.
+
+    :param G:
+    :param u:
+    :param v:
+    :return:
+    """
+
+    if nx.is_directed(G):
+        return len(set(G.successors(u)) & set(G.successors(v)))
+    else:
+        return len(G.common_neighbors(u, v))
+
+def common_neighbors_vectorized(G, nodelist=None):
+    """ Gets common neighbors for all pairs of nodes in G.
+
+    :param G:
+    :return: A matrix A where A[i, j] is the number of common successors between node i and node j.
+    """
+
+    if nx.is_directed(G):
+        if nodelist is None:
+            nodelist = sorted(G.nodes())
+        adj_mat = nx.adjacency_matrix(G, nodelist=nodelist)
+
+        logging.info(f"Performing large matrix multiplication")
+        time_tic = time.perf_counter()
+        common_neighbor_mat = adj_mat.dot(adj_mat.T)
+        common_neighbor_mat.setdiag(0)
+        time_toc = time.perf_counter()
+        logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
+
+        return common_neighbor_mat.toarray()
+    else:
+        raise NotImplementedError("Not implemented for undirected graphs.")
 
 def jaccard_coefficient(G):
     '''

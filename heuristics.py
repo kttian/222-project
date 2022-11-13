@@ -47,6 +47,7 @@ def common_neighbors(G, u, v):
     else:
         return len(G.common_neighbors(u, v))
 
+
 def common_neighbors_vectorized(G, nodelist=None):
     """ Gets common neighbors for all pairs of nodes in G.
 
@@ -61,14 +62,15 @@ def common_neighbors_vectorized(G, nodelist=None):
 
         logging.info(f"Performing large matrix multiplication")
         time_tic = time.perf_counter()
-        common_neighbor_mat = adj_mat.dot(adj_mat.T)
-        common_neighbor_mat.setdiag(0)
+        scores = adj_mat.dot(adj_mat.T)
+        scores.setdiag(0)
         time_toc = time.perf_counter()
         logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
 
-        return common_neighbor_mat.toarray()
+        return scores.toarray()
     else:
         raise NotImplementedError("Not implemented for undirected graphs.")
+
 
 def jaccard_coefficient(G):
     '''
@@ -94,6 +96,37 @@ def katz(G):
     TODO: double check this one 
     '''
     return nx.katz_centrality(G)
+
+
+def katz_vectorized(G, beta=0.05, nodelist=None):
+    """ Computes Katz measure as defined in:
+
+    Liben-Nowell, David, and Jon Kleinberg. “The Link Prediction Problem for Social Networks.” In Proceedings of the
+    Twelfth International Conference on Information and Knowledge Management, 556–59. CIKM ’03.
+    New York, NY, USA: Association for Computing Machinery, 2003. https://doi.org/10.1145/956863.956972.
+
+    :param G:
+    :param beta:
+    :param nodelist:
+    :return:
+    """
+    if nx.is_directed(G):
+        if nodelist is None:
+            nodelist = sorted(G.nodes())
+        adj_mat = nx.adjacency_matrix(G, nodelist=nodelist)
+
+        logging.info(f"Performing large matrix multiplication")
+        time_tic = time.perf_counter()
+        identity = sp.sparse.identity(len(nodelist), format='csr')
+        scores = sp.sparse.linalg.inv(identity - beta * adj_mat) - identity
+        scores.setdiag(0)
+        time_toc = time.perf_counter()
+        logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
+
+        return scores.toarray()
+    else:
+        raise NotImplementedError("Not implemented for undirected graphs.")
+
 
 def hitting_time(G):
     '''

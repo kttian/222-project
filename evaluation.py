@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from heuristics import *
 from dataset import * 
 
+
 def evaluation(G_test, G_train, heuristic_fn, log_edges_every=10000):
     """
     For every pair of vertices in train graph without an existing edge,
@@ -55,6 +56,7 @@ def evaluation(G_test, G_train, heuristic_fn, log_edges_every=10000):
     see whether scores are predictive 
     '''
 
+
 def evaluation_vectorized(G_train, G_test, heuristic_fn):
     # Obtain new edges in test graph
     G_train_edges_set = set(G_train.edges())
@@ -63,7 +65,7 @@ def evaluation_vectorized(G_train, G_test, heuristic_fn):
 
     # Obtain scores for all edges
     sorted_nodes = np.array(sorted(G_train.nodes()))
-    scores = heuristic_fn(G_train)
+    scores = heuristic_fn(G_train, nodelist=sorted_nodes)
 
     # Sort edges scores
     logging.info(f"Sorting scores")
@@ -89,16 +91,16 @@ def evaluation_vectorized(G_train, G_test, heuristic_fn):
     logging.info(f"Removed existing edges in {time_toc - time_tic:.2f} seconds")
 
     # Compute accuracy
-    print(len(set(pred_edges) & new_edges))
+    accuracy(pred_edges, new_edges)
 
 
-
-def accuracy(G_test, G_pred):
+def accuracy(pred_edges, new_edges):
     '''
     accuracy: # edges predicted correctly / # missing edges in test set
     '''
     # TODO: how to turn into a prediction?
-    pass 
+    print(f"Number of correctly predicted edges: {len(set(pred_edges) & set(new_edges))}")
+
 
 if __name__ == '__main__':
     # parser = argparse.ArgumentParser()
@@ -124,4 +126,3 @@ if __name__ == '__main__':
     
     # evaluation(test_G, train_G, common_neighbors)
     evaluation_vectorized(train_G, test_G, common_neighbors_vectorized)
-

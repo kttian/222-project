@@ -8,15 +8,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-def check_set(A, B):
-    A = set(A)
-    B = set(B)
-    print(f"len A {len(A)} | len B {len(B)} | intersection {len(A.intersection(B))}")
-    print(len(A.difference(B)))
-    print(list(A.difference(B))[:10])
-    print(len(B.difference(A)))
-    print(list(B.difference(A))[:10])
-
 
 # functions for loading and processing the cit-HepPh dataset: 
 # a high-energy physics citation network
@@ -91,22 +82,6 @@ def filter_prolific_authors(G, kappa=3):
     """
     return G.subgraph([n for n in G.nodes() if len(list(G.neighbors(n))) >= kappa])
 
-def test_loading(G, timelist):
-    # test loading dataset
-    print("...loading dataset")
-    # G, timelist = load_dataset(small=small)
-    print("Num Nodes:", G.number_of_nodes(), "Num Edges:", G.number_of_edges())
-    print("Time Qtles:", np.quantile(timelist, [0.25, 0.5, 0.75]))
-    node_list = list(G.nodes(data=True))
-    edge_list = list(G.edges(data=True))
-    print("First few nodes:", node_list[:5])
-    print("First few edges:", edge_list[:5])
-
-    print("...splitting dataset")
-    train_G, test_G = split_graph(G, timelist, 0.5)
-    print("Num Nodes:", train_G.number_of_nodes(), "Num Edges:", train_G.number_of_edges())
-    print("Num Nodes:", test_G.number_of_nodes(), "Num Edges:", test_G.number_of_edges())
-
 
 # bitcoin data
 # https://snap.stanford.edu/data/soc-sign-bitcoinotc.html
@@ -132,6 +107,7 @@ def load_dataset_bitcoinotc(small=-1):
 
     return G, date_list
 
+# generic graph functions for all datasets
 def split_graph(G, time_list, split_quantile):
     '''
     Takes in a graph, range of times, and a split quantile (e.g. 0.5)
@@ -162,6 +138,30 @@ def graph_subset(G, start_date, end_date):
     edge_list = [(s,t) for s,t,a in G.edges(data=True) if start_date <= a['time'] < end_date]
     return G.edge_subgraph(edge_list)
 
+def test_loading(G, timelist):
+    # test loading dataset
+    print("...loading dataset")
+    # G, timelist = load_dataset(small=small)
+    print("Num Nodes:", G.number_of_nodes(), "Num Edges:", G.number_of_edges())
+    print("Time Qtles:", np.quantile(timelist, [0.25, 0.5, 0.75]))
+    node_list = list(G.nodes(data=True))
+    edge_list = list(G.edges(data=True))
+    print("First few nodes:", node_list[:5])
+    print("First few edges:", edge_list[:5])
+
+    print("...splitting dataset")
+    train_G, test_G = split_graph(G, timelist, 0.5)
+    print("Num Nodes:", train_G.number_of_nodes(), "Num Edges:", train_G.number_of_edges())
+    print("Num Nodes:", test_G.number_of_nodes(), "Num Edges:", test_G.number_of_edges())
+
+def check_set(A, B):
+    A = set(A)
+    B = set(B)
+    print(f"len A {len(A)} | len B {len(B)} | intersection {len(A.intersection(B))}")
+    print(len(A.difference(B)))
+    print(list(A.difference(B))[:10])
+    print(len(B.difference(A)))
+    print(list(B.difference(A))[:10])
 
 if __name__ == '__main__':
     print("\nbitcoin graph")

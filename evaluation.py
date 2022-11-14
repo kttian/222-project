@@ -165,6 +165,8 @@ if __name__ == '__main__':
                             'bitcoinotc'
                         ],
                         )
+    parser.add_argument('--dataset_split_quantile', type=float, default=0.5,
+                        help='quantile to split between train and test dataset')
     parser.add_argument('--heuristic', type=str, required=True,
                         help='heuristic to use',
                         choices=[
@@ -183,9 +185,10 @@ if __name__ == '__main__':
 
     # Load dataset
     if args.dataset == 'bitcoinotc':
-        test_G, train_G = load_dataset_bitcoinotc()
+        G, date_list = load_dataset_bitcoinotc()
     else:
         raise ValueError(f"Unknown dataset {args.exp_name}")
+    train_G, test_G = split_graph(G, date_list, args.dataset_split_quantile)
 
     # Load heuristic function
     if args.heuristic == 'cn':
@@ -206,4 +209,8 @@ if __name__ == '__main__':
 
     # Evaluate the prediction
     predicted_edges_acc = evaluation(pred_edges, new_edges)
-    plot_evaluation(predicted_edges_acc, dataset_name=args.dataset, heuristic_name=args.heuristic)
+    plot_evaluation(
+        predicted_edges_acc,
+        dataset_name=args.dataset,
+        heuristic_name=args.heuristic
+    )

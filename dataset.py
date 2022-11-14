@@ -1,5 +1,6 @@
 '''
 This file loads our datasets 
+TOOD: add links for downloading into dataset folder
 '''
 
 import networkx as nx
@@ -81,6 +82,7 @@ def load_dataset_cit_hep_ph(with_date=False, small=-1):
         end_date = max(date_list)
         return G, {'start_date': start_date, 'end_date': end_date}
 
+    
 def filter_prolific_authors(G, kappa=3):
     """ Filter out authors who have at least written a minimum number of papers.
 
@@ -100,8 +102,10 @@ def test_loading(load_dataset):
     G, metadata = load_dataset(with_date=False)
     # assert(G.number_of_nodes() == 34546 and G.number_of_edges() == 421578)
     print("Num Nodes:", G.number_of_nodes(), "Num Edges:", G.number_of_edges())
-    print("First few nodes:", list(G.nodes(data=True))[:5])
-    print("Example node:", G.nodes[9907233])
+    node_list = list(G.nodes(data=True))
+    edge_list = list(G.edges(data=True))
+    print("First few nodes:", node_list[:5])
+    print("First few edges:", edge_list[:5])
 
     print("\nTest loading dataset with dates")
     G, metadata = load_dataset(with_date=True)
@@ -127,13 +131,21 @@ def test_loading(load_dataset):
 # Range of edge weight	-10 to +10
 # Percentage of positive edges	89%
 def load_dataset_bitcoinotc(with_date=False, small=-1):
+    '''
+    Returns:
+        G: full graph, which is also the test graph
+        train_G: train graphs
+    '''
     df = pd.read_csv("dataset/soc-sign-bitcoinotc.csv.gz", compression='gzip', header=None)
     df.columns = ['source', 'target', 'rating', 'time']
     print(df.head())
     print(df.columns)
     G = nx.from_pandas_edgelist(df, source='source', target='target', edge_attr=['rating', 'time'], create_using=nx.DiGraph())
-    print(np.quantile(df['time'], [0.25, 0.5, 0.75]))
-    return G, df 
+    start_time = df['time'].min()
+    end_time = df['time'].max()
+    split_time = df['time'].median()
+    train_G = graph_subset(G, start_date=start_time, end_date=split_time)
+    return G, train_G
 
 def filter_graph(G):
     """ Filter out nodes without dates.
@@ -170,6 +182,6 @@ if __name__ == '__main__':
     test_G = graph_subset(G, start_date=start_time, end_date=end_time+1)
     print("Num Nodes:", test_G.number_of_nodes(), "Num Edges:", test_G.number_of_edges())
 
-    # test_loading(load_dataset_bitcoinotc)
+    test_loading(load_dataset_bitcoinotc)
 
     

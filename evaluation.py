@@ -7,6 +7,7 @@ Performance metrics:
 """
 import argparse
 import logging
+from pathlib import Path
 import time
 
 import networkx as nx
@@ -56,6 +57,7 @@ def evaluation(G_test, G_train, heuristic_fn, log_edges_every=10000):
     see whether scores are predictive 
     '''
 
+
 def score_vectorized(G_train, heuristic_fn_vec):
     '''
     Compute the score for every pair of nodes in the train graph
@@ -68,15 +70,22 @@ def score_vectorized(G_train, heuristic_fn_vec):
     scores = heuristic_fn_vec(G_train, nodelist=sorted_nodes)
     return scores 
 
-def evaluation_vectorized(G_train, G_test, heuristic_fn):
-    # Obtain new edges in test graph
-    G_train_edges_set = set(G_train.edges())
-    new_edges = set(G_test.edges()) - G_train_edges_set
-    num_new_edges = len(new_edges)
+
+def prediction_vectorized(G_train, heuristic_fn_vec, use_top_n_edges=None):
+    """ Predicts edges in G_test using the heuristic function.
+
+    :param G_train:
+    :param G_test:
+    :param heuristic_fn_vec:
+    :param use_top_n_edges: Integer, top n scoring edges to use for prediction. If None, use number
+        of new edges in G_test.
+    :return:
+    """
+    assert(use_top_n_edges is not None)
 
     # obtain scores for all pairs of nodes in train graph
     sorted_nodes = np.array(sorted(G_train.nodes()))
-    scores = score_vectorized(G_train, heuristic_fn)
+    scores = score_vectorized(G_train, heuristic_fn_vec)
 
     # Sort edges scores
     logging.info(f"Sorting scores")
@@ -89,28 +98,46 @@ def evaluation_vectorized(G_train, G_test, heuristic_fn):
     time_toc = time.perf_counter()
     logging.info(f"Sorted scores in {time_toc - time_tic:.2f} seconds")
 
+    # Obtain new edges in test graph
+    G_train_edges_set = set(G_train.edges())
+
     # Need to remove the edges that already exist in the train graph
     logging.info(f"Removing existing edges")
     time_tic = time.perf_counter()
     pred_edges = []
     for u, v in sorted_scoring_edges:
-        if len(pred_edges) >= num_new_edges:
+        if len(pred_edges) >= use_top_n_edges:
             break
         if (u, v) not in G_train_edges_set:
             pred_edges.append((u, v))
     time_toc = time.perf_counter()
     logging.info(f"Removed existing edges in {time_toc - time_tic:.2f} seconds")
 
-    # Compute accuracy
-    accuracy(pred_edges, new_edges)
+    return pred_edges
 
 
-def accuracy(pred_edges, new_edges):
-    '''
-    accuracy: # edges predicted correctly / # missing edges in test set
-    '''
-    # TODO: how to turn into a prediction?
-    print(f"Number of correctly predicted edges: {len(set(pred_edges) & set(new_edges))}")
+def evaluation(pred_edges, expected_edges, step_size=1000, project_dir=Path.cwd()):
+    """ Evaluate the performance of the prediction.
+
+    :param pred_edges:
+    :param new_edges:
+    :param step_size:
+    :param project_dir:
+    :return:
+    """
+    # Create result directory
+    res_dir = project_dir / 'res'
+    if not res_dir.exists():
+        res_dir.mkdir(exist_ok=True)
+
+    all_correct_pred_edges = set(pred_edges) & set(expected_edges)
+    num_of_correctly_predicted_edges = []
+    for i in range(0, len(pred_edges), step_size):
+        num_of_correctly_predicted_edges.append(len(set(pred_edges[:i]) & all_correct_pred_edges))
+
+    fig, ax = plt.subplots()
+    ax.plot(np.arange(0, len(pred_edges), step_size), num_of_correctly_predicted_edges)
+    fig.savefig(res_dir / 'num_of_correctly_predicted_edges.png', dpi=1200, transparent=True)
 
 
 if __name__ == '__main__':
@@ -134,6 +161,11 @@ if __name__ == '__main__':
     test_G = graph_subset(G, start_date='1997-01-01', end_date='2000-01-01')
     # train_G = filter_prolific_authors(train_G)
     # test_G = filter_prolific_authors(test_G)
-    
-    # evaluation(test_G, train_G, common_neighbors)
-    evaluation_vectorized(train_G, test_G, common_neighbors_vectorized)
+
+    # Make prediction using top n scoring edges
+    new_edges = set(test_G.edges()) - set(train_G.edges())
+    use_top_n_edges = len(new_edges) * 2
+    pred_edges = prediction_vectorized(train_G, test_G, common_neighbors_vectorized, use_top_n_edges=use_top_n_edges)
+
+    # Evaluate the prediction
+    evaluation(pred_edges, new_edges)

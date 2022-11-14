@@ -171,6 +171,8 @@ if __name__ == '__main__':
                         help='heuristic to use',
                         choices=[
                             'cn',
+                            'jaccard',
+                            'adamic_adar',
                             'katz-0_05',
                             'katz-0_005',
                             'katz-0_0005',
@@ -193,6 +195,10 @@ if __name__ == '__main__':
     # Load heuristic function
     if args.heuristic == 'cn':
         heuristic_fn_vec = common_neighbors_vectorized
+    elif args.heuristic == 'jaccard':
+        heuristic_fn_vec = jaccard_coefficient_vectorized
+    elif args.heuristic == 'adamic_adar':
+        heuristic_fn_vec = adamic_adar_vectorized
     elif args.heuristic == 'katz-0_05':
         heuristic_fn_vec = katz_0_05_vectorized
     elif args.heuristic == 'katz-0_005':

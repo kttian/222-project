@@ -92,11 +92,15 @@ def jaccard_coefficient_vectorized(G, nodelist=None):
     """
     if nodelist is None:
         nodelist = sorted(G.nodes())
+    nodeid_to_idx = {nodeid: idx for idx, nodeid in enumerate(nodelist)}
+    if nx.is_directed(G):
+        logging.info(f"Input graph is directed; converting to undirected graph")
+        G = G.to_undirected()
     logging.info(f"Computing Jaccard's coefficient")
     time_tic = time.perf_counter()
-    scores = np.zeros(len(nodelist), len(nodelist))
+    scores = np.zeros((len(nodelist), len(nodelist)))
     for u, v, p in nx.jaccard_coefficient(G):
-        scores[u, v] = p
+        scores[nodeid_to_idx[u], nodeid_to_idx[v]] = p
     time_toc = time.perf_counter()
     logging.info(f"Finished computing Jaccard's coefficient in {time_toc - time_tic:.2f} seconds")
     return scores
@@ -122,11 +126,15 @@ def adamic_adar_vectorized(G, nodelist=None):
         """
     if nodelist is None:
         nodelist = sorted(G.nodes())
+    nodeid_to_idx = {nodeid: idx for idx, nodeid in enumerate(nodelist)}
+    if nx.is_directed(G):
+        logging.info(f"Input graph is directed; converting to undirected graph")
+        G = G.to_undirected()
     logging.info(f"Computing Adamic/Adar coefficient")
     time_tic = time.perf_counter()
-    scores = np.zeros(len(nodelist), len(nodelist))
-    for u, v, p in nx.adamic_adar_index(G):
-        scores[u, v] = p
+    scores = np.zeros((len(nodelist), len(nodelist)))
+    for u, v, p in nx.jaccard_coefficient(G):
+        scores[nodeid_to_idx[u], nodeid_to_idx[v]] = p
     time_toc = time.perf_counter()
     logging.info(f"Finished computing Adamic/Adar coefficient in {time_toc - time_tic:.2f} seconds")
     return scores

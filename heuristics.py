@@ -78,11 +78,59 @@ def jaccard_coefficient(G):
     '''
     return nx.jaccard_coefficient(G)
 
+
+def jaccard_coefficient_vectorized(G, nodelist=None):
+    """ Computes Jaccard's coefficient as defined in:
+
+    Liben-Nowell, David, and Jon Kleinberg. “The Link Prediction Problem for Social Networks.” In Proceedings of the
+    Twelfth International Conference on Information and Knowledge Management, 556–59. CIKM ’03.
+    New York, NY, USA: Association for Computing Machinery, 2003. https://doi.org/10.1145/956863.956972.
+
+    :param G:
+    :param nodelist:
+    :return:
+    """
+    if nodelist is None:
+        nodelist = sorted(G.nodes())
+    logging.info(f"Computing Jaccard's coefficient")
+    time_tic = time.perf_counter()
+    scores = np.zeros(len(nodelist), len(nodelist))
+    for u, v, p in nx.jaccard_coefficient(G):
+        scores[u, v] = p
+    time_toc = time.perf_counter()
+    logging.info(f"Finished computing Jaccard's coefficient in {time_toc - time_tic:.2f} seconds")
+    return scores
+
+
 def adamic_adar(G):
     '''
     adamic/adar
     '''
     return nx.adamic_adar_index(G)
+
+
+def adamic_adar_vectorized(G, nodelist=None):
+    """ Computes Adamic/Adar index as defined in:
+
+        Liben-Nowell, David, and Jon Kleinberg. “The Link Prediction Problem for Social Networks.” In Proceedings of the
+        Twelfth International Conference on Information and Knowledge Management, 556–59. CIKM ’03.
+        New York, NY, USA: Association for Computing Machinery, 2003. https://doi.org/10.1145/956863.956972.
+
+        :param G:
+        :param nodelist:
+        :return:
+        """
+    if nodelist is None:
+        nodelist = sorted(G.nodes())
+    logging.info(f"Computing Adamic/Adar coefficient")
+    time_tic = time.perf_counter()
+    scores = np.zeros(len(nodelist), len(nodelist))
+    for u, v, p in nx.adamic_adar_index(G):
+        scores[u, v] = p
+    time_toc = time.perf_counter()
+    logging.info(f"Finished computing Adamic/Adar coefficient in {time_toc - time_tic:.2f} seconds")
+    return scores
+
 
 def preferential_attachment(G):
     '''
@@ -126,6 +174,18 @@ def katz_vectorized(G, beta=0.05, nodelist=None):
         return scores.toarray()
     else:
         raise NotImplementedError("Not implemented for undirected graphs.")
+
+
+def katz_0_05_vectorized(G, nodelist=None):
+    return katz_vectorized(G, beta=0.05, nodelist=nodelist)
+
+
+def katz_0_005_vectorized(G, nodelist=None):
+    return katz_vectorized(G, beta=0.005, nodelist=nodelist)
+
+
+def katz_0_0005_vectorized(G, nodelist=None):
+    return katz_vectorized(G, beta=0.0005, nodelist=nodelist)
 
 
 def hitting_time(G):

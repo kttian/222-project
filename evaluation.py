@@ -13,7 +13,7 @@ import time
 import networkx as nx
 import matplotlib.pyplot as plt
 from heuristics import *
-from dataset import * 
+from dataset import *
 
 
 def evaluation(G_test, G_train, heuristic_fn, log_edges_every=10000):
@@ -47,7 +47,7 @@ def evaluation(G_test, G_train, heuristic_fn, log_edges_every=10000):
     print("future edges", len(edge_scores))
     print("future non-edges", len(no_edge_scores))
     max_edge_score = np.nanmax(edge_scores)
-    np.nan_to_num(edge_scores, copy=False, nan=max_edge_score+1)
+    np.nan_to_num(edge_scores, copy=False, nan=max_edge_score + 1)
     plt.hist(edge_scores)
     plt.hist(no_edge_scores)
     plt.show()
@@ -68,7 +68,7 @@ def score_vectorized(G_train, heuristic_fn_vec):
     # Obtain scores for all edges
     sorted_nodes = np.array(sorted(G_train.nodes()))
     scores = heuristic_fn_vec(G_train, nodelist=sorted_nodes)
-    return scores 
+    return scores
 
 
 def prediction_vectorized(G_train, heuristic_fn_vec, use_top_n_edges=None):
@@ -81,7 +81,7 @@ def prediction_vectorized(G_train, heuristic_fn_vec, use_top_n_edges=None):
         of new edges in G_test.
     :return:
     """
-    assert(use_top_n_edges is not None)
+    assert (use_top_n_edges is not None)
 
     # obtain scores for all pairs of nodes in train graph
     sorted_nodes = np.array(sorted(G_train.nodes()))
@@ -116,56 +116,94 @@ def prediction_vectorized(G_train, heuristic_fn_vec, use_top_n_edges=None):
     return pred_edges
 
 
-def evaluation(pred_edges, expected_edges, step_size=1000, project_dir=Path.cwd()):
+def evaluation(pred_edges, expected_edges, step_size=1000):
     """ Evaluate the performance of the prediction.
 
     :param pred_edges:
-    :param new_edges:
+    :param expected_edges:
     :param step_size:
-    :param project_dir:
     :return:
     """
-    # Create result directory
-    res_dir = project_dir / 'res'
-    if not res_dir.exists():
-        res_dir.mkdir(exist_ok=True)
-
     all_correct_pred_edges = set(pred_edges) & set(expected_edges)
     num_of_correctly_predicted_edges = []
     for i in range(0, len(pred_edges), step_size):
         num_of_correctly_predicted_edges.append(len(set(pred_edges[:i]) & all_correct_pred_edges))
+    predicted_edges_acc = np.array(num_of_correctly_predicted_edges) / len(expected_edges)
 
+    return predicted_edges_acc
+
+
+def plot_evaluation(predicted_edges_acc, step_size=1000, project_dir=Path.cwd(), dataset_name="", heuristic_name=""):
+    """ Plot the evaluation result.
+
+    :param predicted_edges_acc:
+    :param step_size:
+    :param project_dir:
+    :param dataset_name:
+    :param heuristic_name:
+    :return:
+    """
+    # Create result directory
+    res_dir = project_dir / 'res' / dataset_name
+    if not res_dir.exists():
+        res_dir.mkdir(parents=True)
+
+    # Plot the performance
     fig, ax = plt.subplots()
-    ax.plot(np.arange(0, len(pred_edges), step_size), num_of_correctly_predicted_edges)
-    fig.savefig(res_dir / 'num_of_correctly_predicted_edges.png', dpi=1200, transparent=True)
+    ax.plot(np.arange(0, len(pred_edges), step_size), predicted_edges_acc)
+    ax.set_title(f"Prediction Accuracy - {heuristic_name}")
+    ax.set_ylabel('correctly predicted edges / number of new edges')
+    ax.set_xlabel(f'Top n scoring edges, binned by {step_size}')
+    fig.savefig(res_dir / f'prediction_acc-{heuristic_name}.png', dpi=1200, transparent=True)
 
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--config', type=str, required=True)
-    # parser.add_argument('--model', type=str, required=True)
-    # parser.add_argument('--output', type=str, required=True)
-    # parser.add_argument('--data', type=str, required=True)
-    # parser.add_argument('--gpu', type=str, default='0')
-    # parser.add_argument('--batch_size', type=int, default=32)
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str, required=True,
+                        help='dataset to load',
+                        choices=[
+                            'bitcoinotc'
+                        ],
+                        )
+    parser.add_argument('--heuristic', type=str, required=True,
+                        help='heuristic to use',
+                        choices=[
+                            'cn',
+                            'katz-0_05',
+                            'katz-0_005',
+                            'katz-0_0005',
+                        ],
+                        )
+    args = parser.parse_args()
 
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s %(levelname)s %(filename)s %(funcName)s(%(lineno)d) %(message)s',
     )
 
-    G, metadata = load_dataset(with_date=True, small=-1)
-    G = filter_graph(G)
-    train_G = graph_subset(G, start_date='1994-01-01', end_date='1997-01-01')
-    test_G = graph_subset(G, start_date='1997-01-01', end_date='2000-01-01')
-    # train_G = filter_prolific_authors(train_G)
-    # test_G = filter_prolific_authors(test_G)
+    # Load dataset
+    if args.dataset == 'bitcoinotc':
+        test_G, train_G = load_dataset_bitcoinotc()
+    else:
+        raise ValueError(f"Unknown dataset {args.exp_name}")
+
+    # Load heuristic function
+    if args.heuristic == 'cn':
+        heuristic_fn_vec = common_neighbors_vectorized
+    elif args.heuristic == 'katz-0_05':
+        heuristic_fn_vec = katz_0_05_vectorized
+    elif args.heuristic == 'katz-0_005':
+        heuristic_fn_vec = katz_0_005_vectorized
+    elif args.heuristic == 'katz-0_0005':
+        heuristic_fn_vec = katz_0_0005_vectorized
+    else:
+        raise ValueError(f"Unknown heuristic {args.heuristic}")
 
     # Make prediction using top n scoring edges
     new_edges = set(test_G.edges()) - set(train_G.edges())
-    use_top_n_edges = len(new_edges) * 2
-    pred_edges = prediction_vectorized(train_G, test_G, common_neighbors_vectorized, use_top_n_edges=use_top_n_edges)
+    use_top_n_edges = min(50_000, len(test_G.edges()))
+    pred_edges = prediction_vectorized(train_G, heuristic_fn_vec, use_top_n_edges=use_top_n_edges)
 
     # Evaluate the prediction
-    evaluation(pred_edges, new_edges)
+    predicted_edges_acc = evaluation(pred_edges, new_edges)
+    plot_evaluation(predicted_edges_acc, dataset_name=args.dataset, heuristic_name=args.heuristic)

@@ -3,9 +3,10 @@ This file loads our datasets
 TOOD: add links for downloading into dataset folder
 '''
 
+import datetime
 import networkx as nx
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 def check_set(A, B):
     A = set(A)
@@ -37,7 +38,7 @@ def load_dates_cit_hep_ph():
                 date_dict[int(node)] = date 
     check_set(date_dict.keys(), G.nodes(data=False))
 
-def load_dataset_cit_hep_ph(with_date=False, small=-1):
+def load_dataset_cit_hep_ph(small=-1):
     '''
     load in the cit-hep-ph dataset
     
@@ -54,35 +55,29 @@ def load_dataset_cit_hep_ph(with_date=False, small=-1):
         # only use the first 'small' number of nodes, for fast debugging purposes 
         G = G.subgraph(list(G.nodes)[:small])
     
-    if not with_date:
-        # load graph without publication dates 
-        return G, {}                  
+    # load the publication dates
+    # and add date as a node attribute 
+    node2date = {}
+    with open('dataset/cit-HepPh-dates.txt') as f:
+        for line in f:
+            if line[0] != '#': # ignore lines starting with #
+                node, date = line.split()
+                date_obj = datetime.datetime.strptime(date, '%Y-%m-%d')
+                node2date[int(node)] = int(date_obj.timestamp())
+
+    # add date as edge attribute 
+    for u, v, e in G.edges(data=True):
+        if u in node2date:
+            e['time'] = node2date[u]
+
+    if small > 0:
+        date_list = [a['time'] for s,t,a in G.edges(data=True)]
     else:
-        # load the publication dates
-        # and add date as a node attribute 
-        with open('dataset/cit-HepPh-dates.txt') as f:
-            for line in f:
-                if line[0] != '#': # ignore lines starting with #
-                    node, date = line.split()
-                    # if node is in graph, add date attribute
-                    if int(node) in G.nodes():
-                        G.nodes[int(node)]['time'] = str(date)
-
-        # add date as edge attribute 
-        for u, v, d in G.edges(data=True):
-            if 'time' in G.nodes[v]:
-                d['time'] = G.nodes[v]['time']
-
-        # get the start and end date
-        date_list = [] 
-        for n,d in G.nodes(data=True):
-            if 'time' in d:
-                date_list.append(d['time'])
-        start_date = min(date_list)
-        end_date = max(date_list)
-        return G, {'start_date': start_date, 'end_date': end_date}
-
+        date_list = list(node2date.values())
     
+    # return graph, time list 
+    return G, date_list 
+
 def filter_prolific_authors(G, kappa=3):
     """ Filter out authors who have at least written a minimum number of papers.
 
@@ -96,41 +91,29 @@ def filter_prolific_authors(G, kappa=3):
     """
     return G.subgraph([n for n in G.nodes() if len(list(G.neighbors(n))) >= kappa])
 
-def test_loading(load_dataset):
+def test_loading(G, timelist):
     # test loading dataset
-    print("\nTest loading dataset without dates")
-    G, metadata = load_dataset(with_date=False)
-    # assert(G.number_of_nodes() == 34546 and G.number_of_edges() == 421578)
+    print("...loading dataset")
+    # G, timelist = load_dataset(small=small)
     print("Num Nodes:", G.number_of_nodes(), "Num Edges:", G.number_of_edges())
+    print("Time Qtles:", np.quantile(timelist, [0.25, 0.5, 0.75]))
     node_list = list(G.nodes(data=True))
     edge_list = list(G.edges(data=True))
     print("First few nodes:", node_list[:5])
     print("First few edges:", edge_list[:5])
 
-    print("\nTest loading dataset with dates")
-    G, metadata = load_dataset(with_date=True)
-    print("Num Nodes:", G.number_of_nodes(), "Num Edges:", G.number_of_edges())
-    print("First few nodes:", list(G.nodes(data=True))[:5])
-    print("Example node:", G.nodes[9907233])
-    print("Metadata:", metadata)
-
-    # test filter dataset 
-    print("\nTest filtering out nodes without date")
-    G = filter_graph(G)
-    print("Num Nodes:", G.number_of_nodes(), "Num Edges:", G.number_of_edges())
-
-    train_G = graph_subset(G, start_date='1992-01-01', end_date='1997-01-01')
+    print("...splitting dataset")
+    train_G, test_G = split_graph(G, timelist, 0.5)
     print("Num Nodes:", train_G.number_of_nodes(), "Num Edges:", train_G.number_of_edges())
-
-    test_G = graph_subset(G, start_date='1992-01-01', end_date='2002-12-31')
     print("Num Nodes:", test_G.number_of_nodes(), "Num Edges:", test_G.number_of_edges())
+
 
 # bitcoin data
 # https://snap.stanford.edu/data/soc-sign-bitcoinotc.html
 # Nodes	5,881 Edges	35,592
 # Range of edge weight	-10 to +10
 # Percentage of positive edges	89%
-def load_dataset_bitcoinotc(with_date=False, small=-1):
+def load_dataset_bitcoinotc(small=-1):
     '''
     Returns:
         G: full graph, which is also the test graph
@@ -138,50 +121,53 @@ def load_dataset_bitcoinotc(with_date=False, small=-1):
     '''
     df = pd.read_csv("dataset/soc-sign-bitcoinotc.csv.gz", compression='gzip', header=None)
     df.columns = ['source', 'target', 'rating', 'time']
-    print(df.head())
-    print(df.columns)
     G = nx.from_pandas_edgelist(df, source='source', target='target', edge_attr=['rating', 'time'], create_using=nx.DiGraph())
-    start_time = df['time'].min()
-    end_time = df['time'].max()
-    split_time = df['time'].median()
-    train_G = graph_subset(G, start_date=start_time, end_date=split_time)
-    return G, train_G
+    if small > 0:
+        G = G.subgraph(list(G.nodes)[:small])
+
+    if small > 0:
+        date_list = [a['time'] for s,t,a in G.edges(data=True)]
+    else:
+        date_list = list(df['time'])
+
+    return G, date_list
+
+def split_graph(G, time_list, split_quantile):
+    '''
+    Takes in a graph, range of times, and a split quantile (e.g. 0.5)
+    Returns:
+        train graph, test graph
+    '''
+    # for some reason we need to apply a filter on the citations network, since 
+    # not all papers have a date 
+    G = filter_graph(G)
+    time_split = np.quantile(time_list, [split_quantile])[0]
+    print("TIME SPLIT", time_split)
+    train_G = graph_subset(G, start_date=np.min(time_list), end_date=time_split)
+    return train_G, G 
 
 def filter_graph(G):
-    """ Filter out nodes without dates.
+    """ Filter out edges without dates.
 
     :param G:
     :return:
     """
-    return G.subgraph([n for n, d in G.nodes(data=True) if 'time' in d])
+    # alternate: we could consider G.remove_nodes_from instead of subgraph
+    edge_list = [(s,t) for s,t,a in G.edges(data=True) if 'time' in a]
+    return G.edge_subgraph(edge_list)
 
 def graph_subset(G, start_date, end_date):
-    # create graph subset containing nodes with date before date 
-    # alternate: consider G.remove_nodes_from
-    # return G.subgraph([n for n, d in G.nodes(data=True) if (start_date <= d['date'] < end_date)])
-    return nx.DiGraph([(source, target, attr) for source, target, attr in G.edges(data=True) 
-                      if (attr['time'] >= start_date and attr['time'] < end_date)])
+    # create graph subset containing nodes with time within given start and end 
+    # (s,t,a) is a tuple of source, target, and attribute
+    edge_list = [(s,t) for s,t,a in G.edges(data=True) if start_date <= a['time'] < end_date]
+    return G.edge_subgraph(edge_list)
+
 
 if __name__ == '__main__':
-    test_loading(load_dataset_cit_hep_ph)
-    G, df = load_dataset_bitcoinotc()
-    print("Num Nodes:", G.number_of_nodes(), "Num Edges:", G.number_of_edges())
-    node_list = list(G.nodes(data=True))
-    edge_list = list(G.edges(data=True))
-    print("First few nodes:", node_list[:5])
-    print("First few edges:", edge_list[:5])
-    print("Metadata:", np.quantile(df['time'], [0.25, 0.5, 0.75]))
+    print("\nbitcoin graph")
+    G, timelist = load_dataset_bitcoinotc(small=500)
+    test_loading(G, timelist)
 
-    start_time = df['time'].min()
-    end_time = df['time'].max()
-    split_time = df['time'].median()
-
-    train_G = graph_subset(G, start_date=start_time, end_date=split_time)
-    print("Num Nodes:", train_G.number_of_nodes(), "Num Edges:", train_G.number_of_edges())
-
-    test_G = graph_subset(G, start_date=start_time, end_date=end_time+1)
-    print("Num Nodes:", test_G.number_of_nodes(), "Num Edges:", test_G.number_of_edges())
-
-    test_loading(load_dataset_bitcoinotc)
-
-    
+    print("\ncitation graph")
+    G, timelist = load_dataset_cit_hep_ph(small=100)
+    test_loading(G, timelist)

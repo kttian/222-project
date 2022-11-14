@@ -56,6 +56,17 @@ def evaluation(G_test, G_train, heuristic_fn, log_edges_every=10000):
     see whether scores are predictive 
     '''
 
+def score_vectorized(G_train, heuristic_fn_vec):
+    '''
+    Compute the score for every pair of nodes in the train graph
+    To be used in scoring test edges 
+    Returns:
+        scores: NxN matrix of edge scores 
+    '''
+    # Obtain scores for all edges
+    sorted_nodes = np.array(sorted(G_train.nodes()))
+    scores = heuristic_fn_vec(G_train, nodelist=sorted_nodes)
+    return scores 
 
 def evaluation_vectorized(G_train, G_test, heuristic_fn):
     # Obtain new edges in test graph
@@ -63,9 +74,9 @@ def evaluation_vectorized(G_train, G_test, heuristic_fn):
     new_edges = set(G_test.edges()) - G_train_edges_set
     num_new_edges = len(new_edges)
 
-    # Obtain scores for all edges
+    # obtain scores for all pairs of nodes in train graph
     sorted_nodes = np.array(sorted(G_train.nodes()))
-    scores = heuristic_fn(G_train, nodelist=sorted_nodes)
+    scores = score_vectorized(G_train, heuristic_fn)
 
     # Sort edges scores
     logging.info(f"Sorting scores")

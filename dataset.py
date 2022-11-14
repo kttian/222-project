@@ -65,18 +65,18 @@ def load_dataset_cit_hep_ph(with_date=False, small=-1):
                     node, date = line.split()
                     # if node is in graph, add date attribute
                     if int(node) in G.nodes():
-                        G.nodes[int(node)]['date'] = str(date)
+                        G.nodes[int(node)]['time'] = str(date)
 
         # add date as edge attribute 
         for u, v, d in G.edges(data=True):
-            if 'date' in G.nodes[v]:
-                d['date'] = G.nodes[v]['date']
+            if 'time' in G.nodes[v]:
+                d['time'] = G.nodes[v]['time']
 
         # get the start and end date
         date_list = [] 
         for n,d in G.nodes(data=True):
-            if 'date' in d:
-                date_list.append(d['date'])
+            if 'time' in d:
+                date_list.append(d['time'])
         start_date = min(date_list)
         end_date = max(date_list)
         return G, {'start_date': start_date, 'end_date': end_date}
@@ -141,7 +141,7 @@ def filter_graph(G):
     :param G:
     :return:
     """
-    return G.subgraph([n for n, d in G.nodes(data=True) if 'date' in d])
+    return G.subgraph([n for n, d in G.nodes(data=True) if 'time' in d])
 
 def graph_subset(G, start_date, end_date):
     # create graph subset containing nodes with date before date 
@@ -151,6 +151,7 @@ def graph_subset(G, start_date, end_date):
                       if (attr['time'] >= start_date and attr['time'] < end_date)])
 
 if __name__ == '__main__':
+    test_loading(load_dataset_cit_hep_ph)
     G, df = load_dataset_bitcoinotc()
     print("Num Nodes:", G.number_of_nodes(), "Num Edges:", G.number_of_edges())
     node_list = list(G.nodes(data=True))

@@ -48,7 +48,7 @@ def common_neighbors(G, u, v):
         return len(G.common_neighbors(u, v))
 
 
-def common_neighbors_vectorized(G, nodelist=None):
+def common_neighbors_vectorized(G, nodelist=None, set_diag_zero=False):
     """ Gets common neighbors for all pairs of nodes in G.
 
     :param G:
@@ -63,7 +63,8 @@ def common_neighbors_vectorized(G, nodelist=None):
         logging.info(f"Performing large matrix multiplication")
         time_tic = time.perf_counter()
         scores = adj_mat.dot(adj_mat.T)
-        scores.setdiag(0)
+        if set_diag_zero:
+            scores.setdiag(0)
         time_toc = time.perf_counter()
         logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
 
@@ -175,7 +176,6 @@ def katz_vectorized(G, beta=0.05, nodelist=None):
         time_tic = time.perf_counter()
         identity = sp.sparse.identity(len(nodelist), format='csr')
         scores = sp.sparse.linalg.inv(identity - beta * adj_mat) - identity
-        scores.setdiag(0)
         time_toc = time.perf_counter()
         logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
 

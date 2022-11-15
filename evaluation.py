@@ -71,24 +71,21 @@ def score_vectorized(G_train, heuristic_fn_vec):
     return scores
 
 
-def prediction_vectorized(G_train, heuristic_fn_vec, use_top_n_edges=None):
+def prediction_vectorized(scores, train_G, use_top_n_edges=None):
     """ Predicts edges in G_test using the heuristic function.
     Converts the scores computed with a heuristic function into edge predictions
     via the method from the Kleinberg paper, which takes the top n
     scoring edges to predict the n new edges in the test graph
 
-    :param G_train:
-    :param G_test:
-    :param heuristic_fn_vec:
+    :param scores: NxN matrix of edge scores
+    :param train_G: train graph
     :param use_top_n_edges: Integer, top n scoring edges to use for prediction. If None, use number
         of new edges in G_test.
     :return:
     """
     assert (use_top_n_edges is not None)
 
-    # obtain scores for all pairs of nodes in train graph
-    sorted_nodes = np.array(sorted(G_train.nodes()))
-    scores = score_vectorized(G_train, heuristic_fn_vec)
+    sorted_nodes = np.array(sorted(train_G.nodes()))
 
     # Sort edges scores
     logging.info(f"Sorting scores")
@@ -104,7 +101,7 @@ def prediction_vectorized(G_train, heuristic_fn_vec, use_top_n_edges=None):
     logging.info(f"Sorted scores in {time_toc - time_tic:.2f} seconds")
 
     # Obtain new edges in test graph
-    G_train_edges_set = set(G_train.edges())
+    train_G_edges_set = set(train_G.edges())
 
     # Need to remove the edges that already exist in the train graph
     logging.info(f"Removing existing edges")
@@ -113,7 +110,7 @@ def prediction_vectorized(G_train, heuristic_fn_vec, use_top_n_edges=None):
     for u, v in sorted_scoring_edges:
         if len(pred_edges) >= use_top_n_edges:
             break
-        if (u, v) not in G_train_edges_set:
+        if (u, v) not in train_G_edges_set:
             pred_edges.append((u, v))
     time_toc = time.perf_counter()
     logging.info(f"Removed existing edges in {time_toc - time_tic:.2f} seconds")
@@ -160,13 +157,19 @@ def plot_evaluation(predicted_edges_acc, step_size=1000, project_dir=Path.cwd(),
     ax.set_title(f"Prediction Accuracy - {heuristic_name}")
     ax.set_ylabel('correctly predicted edges / number of new edges')
     ax.set_xlabel(f'Top n scoring edges, binned by {step_size}')
-    fig.savefig(res_dir / f'prediction_acc-{heuristic_name}.png', dpi=1200, transparent=True)
+    fig.savefig(res_dir / f'prediction_acc-{heuristic_name}.png', dpi=300, transparent=True)
 
-def pos_neg_scores(scores, G_train, G_test):
+
+def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(), dataset_name="", heuristic_name=""):
     '''
     Obtain list of scores for new edges and non-edges in the test graph
     in order to compute metrics such as distance between distributions 
     '''
+    # Create result directory
+    res_dir = project_dir / 'res' / dataset_name
+    if not res_dir.exists():
+        res_dir.mkdir(parents=True)
+
     sorted_nodes = np.array(sorted(G_train.nodes()))
     # scores = common_neighbors_vectorized(G_train, nodelist=sorted_nodes)
 
@@ -181,16 +184,27 @@ def pos_neg_scores(scores, G_train, G_test):
     # non edges: never appears in test (or train)
     non_edges = test_inv_adj_mat
 
-    positive_scores = scores.flatten()[np.where(new_edges.flatten()==1)[1]]
-    negative_scores = scores.flatten()[np.where(non_edges.flatten()==1)[1]]
+    positive_scores = scores.flatten()[np.where(new_edges.flatten() == 1)[1]]
+    negative_scores = scores.flatten()[np.where(non_edges.flatten() == 1)[1]]
 
-    _ = plt.hist(negative_scores, bins=1000)
-    _ = plt.hist(positive_scores, bins=1000)
+    fig, ax = plt.subplots()
+    ax.hist(negative_scores, bins=100, label='non-edges')
+    ax.hist(positive_scores, bins=100, label='new edges')
+    ax.set_title(f"Score distribution - {heuristic_name}")
+    ax.set_ylim(0, 4000)
+    ax.set_ylabel('frequency')
+    ax.set_xlabel(f'Score')
+    ax.legend()
+    fig.savefig(res_dir / f'score_distribution-{heuristic_name}.png', dpi=300, transparent=True)
 
-    np.mean(positive_scores)
-    np.mean(negative_scores)
-    np.std(positive_scores)
-    np.std(negative_scores)
+    logging.info(f"Max positive score: {np.max(positive_scores)}")
+    logging.info(f"Min positive score: {np.min(positive_scores)}")
+    logging.info(f"Positive score mean: {np.mean(positive_scores)}")
+    logging.info(f"Positive score std: {np.std(positive_scores)}")
+    logging.info(f"Max negative score: {np.max(negative_scores)}")
+    logging.info(f"Min negative score: {np.min(negative_scores)}")
+    logging.info(f"Negative score mean: {np.mean(negative_scores)}")
+    logging.info(f"Negative score std: {np.std(negative_scores)}")
 
     # TODO: can compute any other distribution statistics on 
     # positive scores vs negative scores here
@@ -247,15 +261,25 @@ if __name__ == '__main__':
     else:
         raise ValueError(f"Unknown heuristic {args.heuristic}")
 
+    # Obtain scores for all pairs of nodes in train graph
+    scores = score_vectorized(train_G, heuristic_fn_vec)
+
     # Make prediction using top n scoring edges
     new_edges = set(test_G.edges()) - set(train_G.edges())
     use_top_n_edges = min(50_000, len(test_G.edges()))
-    pred_edges = prediction_vectorized(train_G, heuristic_fn_vec, use_top_n_edges=use_top_n_edges)
+    pred_edges = prediction_vectorized(scores, train_G, use_top_n_edges=use_top_n_edges)
 
     # Evaluate the prediction
     predicted_edges_acc = evaluation(pred_edges, new_edges)
     plot_evaluation(
         predicted_edges_acc,
         dataset_name=args.dataset,
-        heuristic_name=args.heuristic
+        heuristic_name=args.heuristic,
+    )
+    plot_pos_neg_scores(
+        scores,
+        train_G,
+        test_G,
+        dataset_name=args.dataset,
+        heuristic_name=args.heuristic,
     )

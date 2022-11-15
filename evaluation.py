@@ -162,6 +162,39 @@ def plot_evaluation(predicted_edges_acc, step_size=1000, project_dir=Path.cwd(),
     ax.set_xlabel(f'Top n scoring edges, binned by {step_size}')
     fig.savefig(res_dir / f'prediction_acc-{heuristic_name}.png', dpi=1200, transparent=True)
 
+def pos_neg_scores(scores, G_train, G_test):
+    '''
+    Obtain list of scores for new edges and non-edges in the test graph
+    in order to compute metrics such as distance between distributions 
+    '''
+    sorted_nodes = np.array(sorted(G_train.nodes()))
+    # scores = common_neighbors_vectorized(G_train, nodelist=sorted_nodes)
+
+    test_adj_mat = nx.to_numpy_matrix(G_test.subgraph(sorted_nodes))
+    test_inv_adj_mat = np.logical_not(test_adj_mat).astype(int)
+
+    train_adj_mat = nx.to_numpy_matrix(G_train.subgraph(sorted_nodes))
+    train_inv_adj_mat = np.logical_not(train_adj_mat).astype(int)
+
+    # new edges: in test but not in train
+    new_edges = np.logical_and(test_adj_mat, train_inv_adj_mat).astype(int)
+    # non edges: never appears in test (or train)
+    non_edges = test_inv_adj_mat
+
+    positive_scores = scores.flatten()[np.where(new_edges.flatten()==1)[1]]
+    negative_scores = scores.flatten()[np.where(non_edges.flatten()==1)[1]]
+
+    _ = plt.hist(negative_scores, bins=1000)
+    _ = plt.hist(positive_scores, bins=1000)
+
+    np.mean(positive_scores)
+    np.mean(negative_scores)
+    np.std(positive_scores)
+    np.std(negative_scores)
+
+    # TODO: can compute any other distribution statistics on 
+    # positive scores vs negative scores here
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

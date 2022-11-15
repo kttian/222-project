@@ -73,6 +73,9 @@ def score_vectorized(G_train, heuristic_fn_vec):
 
 def prediction_vectorized(G_train, heuristic_fn_vec, use_top_n_edges=None):
     """ Predicts edges in G_test using the heuristic function.
+    Converts the scores computed with a heuristic function into edge predictions
+    via the method from the Kleinberg paper, which takes the top n
+    scoring edges to predict the n new edges in the test graph
 
     :param G_train:
     :param G_test:
@@ -90,7 +93,9 @@ def prediction_vectorized(G_train, heuristic_fn_vec, use_top_n_edges=None):
     # Sort edges scores
     logging.info(f"Sorting scores")
     time_tic = time.perf_counter()
+    # argsort the scores in ascending order to get the u and v endpoints of sorted edges 
     sorted_scoring_edges_u, sorted_scoring_edges_v = np.unravel_index(np.argsort(scores, axis=None), shape=scores.shape)
+    # reverse to get descending order
     sorted_scoring_edges = zip(
         reversed(sorted_nodes[sorted_scoring_edges_u]),
         reversed(sorted_nodes[sorted_scoring_edges_v])
@@ -117,7 +122,7 @@ def prediction_vectorized(G_train, heuristic_fn_vec, use_top_n_edges=None):
 
 
 def evaluation(pred_edges, expected_edges, step_size=1000):
-    """ Evaluate the performance of the prediction.
+    """ Evaluate the accuracy of the prediction.
 
     :param pred_edges:
     :param expected_edges:
@@ -135,6 +140,7 @@ def evaluation(pred_edges, expected_edges, step_size=1000):
 
 def plot_evaluation(predicted_edges_acc, step_size=1000, project_dir=Path.cwd(), dataset_name="", heuristic_name=""):
     """ Plot the evaluation result.
+    Plot the accuracy of the prediction vs top n edges
 
     :param predicted_edges_acc:
     :param step_size:

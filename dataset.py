@@ -75,7 +75,7 @@ def filter_prolific_authors(G, kappa=3):
     Liben-Nowell, David, and Jon Kleinberg. “The Link Prediction Problem for Social Networks.” In Proceedings of the
     Twelfth International Conference on Information and Knowledge Management, 556–59. CIKM ’03.
     New York, NY, USA: Association for Computing Machinery, 2003. https://doi.org/10.1145/956863.956972.
-.
+
     :param G:
     :param kappa:
     :return:

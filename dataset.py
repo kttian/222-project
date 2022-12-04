@@ -94,7 +94,7 @@ def load_dataset_bitcoinotc(small=-1):
         G: full graph, which is also the test graph
         train_G: train graphs
     '''
-    df = pd.read_csv("dataset/soc-sign-bitcoinotc.csv.gz", compression='gzip', header=None)
+    df = pd.read_csv("datasets/bitcoin/soc-sign-bitcoinotc.csv.gz", compression='gzip', header=None)
     df.columns = ['source', 'target', 'rating', 'time']
     G = nx.from_pandas_edgelist(df, source='source', target='target', edge_attr=['rating', 'time'], create_using=nx.DiGraph())
     if small > 0:
@@ -122,6 +122,21 @@ def split_graph(G, time_list, split_quantile):
     train_G = graph_subset(G, start_date=np.min(time_list), end_date=time_split)
     return train_G, G 
 
+def split_graph_with_val(G, time_list, split_quantiles):
+    '''
+    Takes in a graph, range of times, and a split quantile (e.g. 0.5)
+    Returns:
+        train graph, val graph, test graph
+    '''
+    # for some reason we need to apply a filter on the citations network, since 
+    # not all papers have a date 
+    G = filter_graph(G)
+    time_splits = np.quantile(time_list, split_quantiles)
+    # print("TIME SPLIT", time_splits)
+    train_G = graph_subset(G, start_date=np.min(time_list), end_date=time_splits[0])
+    val_G = graph_subset(G, start_date=time_splits[0], end_date=time_splits[1])
+    return train_G, val_G, G
+
 def filter_graph(G):
     """ Filter out edges without dates.
 
@@ -133,6 +148,7 @@ def filter_graph(G):
     return G.edge_subgraph(edge_list)
 
 def graph_subset(G, start_date, end_date):
+    print(start_date, end_date)
     # create graph subset containing nodes with time within given start and end 
     # (s,t,a) is a tuple of source, target, and attribute
     edge_list = [(s,t) for s,t,a in G.edges(data=True) if start_date <= a['time'] < end_date]

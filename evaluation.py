@@ -117,6 +117,22 @@ def prediction_vectorized(scores, train_G, use_top_n_edges=None):
 
     return pred_edges
 
+def prec_rec(pred_edges, expected_edges, step_size=1000):
+    print("hello")
+    print(len(pred_edges), len(expected_edges))
+    
+    prec_list = []
+    rec_list = []
+
+    for i in range(step_size, len(pred_edges), step_size):
+        tp_count = len(set(pred_edges[:i]) & set(expected_edges))
+        precision = tp_count / i 
+        recall = tp_count / len(expected_edges)
+
+        prec_list.append(precision)
+        rec_list.append(recall)
+
+    return np.array(prec_list), np.array(rec_list)
 
 def evaluation(pred_edges, expected_edges, step_size=1000):
     """ Evaluate the accuracy of the prediction.
@@ -126,6 +142,8 @@ def evaluation(pred_edges, expected_edges, step_size=1000):
     :param step_size:
     :return:
     """
+    print("hello")
+    print(len(pred_edges), len(expected_edges))
     all_correct_pred_edges = set(pred_edges) & set(expected_edges)
     num_of_correctly_predicted_edges = []
     for i in range(0, len(pred_edges), step_size):
@@ -160,7 +178,8 @@ def plot_evaluation(predicted_edges_acc, step_size=1000, project_dir=Path.cwd(),
     fig.savefig(res_dir / f'prediction_acc-{heuristic_name}.png', dpi=300, transparent=True)
 
 
-def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(), dataset_name="", heuristic_name=""):
+def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(), 
+                        dataset_name="", heuristic_name="", ymax=1):
     '''
     Obtain list of scores for new edges and non-edges in the test graph
     in order to compute metrics such as distance between distributions 
@@ -188,23 +207,27 @@ def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(), dataset
     negative_scores = scores.flatten()[np.where(non_edges.flatten() == 1)[1]]
 
     fig, ax = plt.subplots()
-    ax.hist(negative_scores, bins=100, label='non-edges')
-    ax.hist(positive_scores, bins=100, label='new edges')
+    ax.hist(negative_scores, bins=10000, label='non-edges', density=True, alpha=0.5)
+    ax.hist(positive_scores, bins=100, label='new edges', density=True, alpha=0.5)
     ax.set_title(f"Score distribution - {heuristic_name}")
-    ax.set_ylim(0, 4000)
+    ax.set_ylim(0, ymax)
+    # ax.set_xlim(0, 20)
     ax.set_ylabel('frequency')
     ax.set_xlabel(f'Score')
     ax.legend()
     fig.savefig(res_dir / f'score_distribution-{heuristic_name}.png', dpi=300, transparent=True)
 
-    logging.info(f"Max positive score: {np.max(positive_scores)}")
-    logging.info(f"Min positive score: {np.min(positive_scores)}")
-    logging.info(f"Positive score mean: {np.mean(positive_scores)}")
-    logging.info(f"Positive score std: {np.std(positive_scores)}")
-    logging.info(f"Max negative score: {np.max(negative_scores)}")
-    logging.info(f"Min negative score: {np.min(negative_scores)}")
-    logging.info(f"Negative score mean: {np.mean(negative_scores)}")
-    logging.info(f"Negative score std: {np.std(negative_scores)}")
+    logging.info(f"Positive score - N:    {np.size(positive_scores)}")
+    logging.info(f"Positive score - Max:  {np.max(positive_scores)}")
+    logging.info(f"Positive score - Min:  {np.min(positive_scores)}")
+    logging.info(f"Positive score - Mean: {np.mean(positive_scores)}")
+    logging.info(f"Positive score - Std:  {np.std(positive_scores)}\n")
+
+    logging.info(f"Negative score - N:    {np.size(negative_scores)}")
+    logging.info(f"Negative score - Max:  {np.max(negative_scores)}")
+    logging.info(f"Negative score - Min:  {np.min(negative_scores)}")
+    logging.info(f"Negative score - Mean: {np.mean(negative_scores)}")
+    logging.info(f"Negative score - Std:  {np.std(negative_scores)}")
 
     # TODO: can compute any other distribution statistics on 
     # positive scores vs negative scores here

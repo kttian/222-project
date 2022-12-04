@@ -132,12 +132,14 @@ def load_dataset_collaboration(name="astro-ph", small=-1):
     num_authors = 0
     name_to_authorid = {}
     G = nx.MultiGraph()
+    timelist = [] 
 
-    with open(f"dataset/collaboration/{name}.txt") as f:
+    with open(f"datasets/collaboration/{name}.txt") as f:
         for line in f.readlines():
             # Obtain year of paper
             line_split_by_space = line.split()
             year = int(line_split_by_space[0])
+            timelist.append(year)
 
             # Obtain authors of paper
             authors = line_split_by_space[1]
@@ -158,7 +160,7 @@ def load_dataset_collaboration(name="astro-ph", small=-1):
                 for u, v in itertools.combinations(author_ids, 2):
                     G.add_edge(u, v, time=year)
 
-    return G
+    return G, timelist 
 
 
 # generic graph functions for all datasets

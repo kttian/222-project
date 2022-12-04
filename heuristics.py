@@ -60,15 +60,15 @@ def common_neighbors_vectorized(G, nodelist=None, set_diag_zero=False, to_save_d
     :return: A matrix A where A[i, j] is the number of common successors between node i and node j.
     """
 
-    if nx.is_directed(G):
-        # if save file exists, load scores
-        if not rerun and os.path.exists(os.path.join(SAVE_DIR, f"{to_save_ds}_common_neighbors.npy")):
-            logging.info(f"Loading scores from {SAVE_DIR}/{to_save_ds}_common_neighbors.npy")
-            return np.load(os.path.join(SAVE_DIR, f"{to_save_ds}_common_neighbors.npy"))
+    # if nx.is_directed(G):
+    # if save file exists, load scores
+    if not rerun and os.path.exists(os.path.join(SAVE_DIR, f"{to_save_ds}_common_neighbors.npy")):
+        logging.info(f"Loading scores from {SAVE_DIR}/{to_save_ds}_common_neighbors.npy")
+        return np.load(os.path.join(SAVE_DIR, f"{to_save_ds}_common_neighbors.npy"))
 
-        if nodelist is None:
-            nodelist = sorted(G.nodes())
-        adj_mat = nx.adjacency_matrix(G, nodelist=nodelist)
+    if nodelist is None:
+        nodelist = sorted(G.nodes())
+    adj_mat = nx.adjacency_matrix(G, nodelist=nodelist)
 
     logging.info(f"Performing large matrix multiplication")
     time_tic = time.perf_counter()
@@ -205,24 +205,24 @@ def katz_vectorized(G, beta=0.05, nodelist=None, to_save_ds="", rerun = True):
         logging.info(f"Loading scores from {SAVE_DIR}/{to_save_ds}_katz.npy")
         return np.load(os.path.join(SAVE_DIR, f"{to_save_ds}_katz.npy"))
 
-    if nx.is_directed(G):
-        if nodelist is None:
-            nodelist = sorted(G.nodes())
-        adj_mat = nx.adjacency_matrix(G, nodelist=nodelist)
+    # if nx.is_directed(G):
+    if nodelist is None:
+        nodelist = sorted(G.nodes())
+    adj_mat = nx.adjacency_matrix(G, nodelist=nodelist)
 
-        logging.info(f"Performing large matrix multiplication")
-        time_tic = time.perf_counter()
-        identity = sp.sparse.identity(len(nodelist), format='csr')
-        scores = sp.sparse.linalg.inv(identity - beta * adj_mat) - identity
-        time_toc = time.perf_counter()
-        logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
+    logging.info(f"Performing large matrix multiplication")
+    time_tic = time.perf_counter()
+    identity = sp.sparse.identity(len(nodelist), format='csr')
+    scores = sp.sparse.linalg.inv(identity - beta * adj_mat) - identity
+    time_toc = time.perf_counter()
+    logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
 
-        if to_save_ds:
-            logging.info(f"Saving scores to {SAVE_DIR}/{to_save_ds}_katz{beta}.npy")
-            np.save(f"{SAVE_DIR}/{to_save_ds}_katz{beta}.npy", scores.toarray())
-        return scores.toarray()
-    else:
-        raise NotImplementedError("Not implemented for undirected graphs.")
+    if to_save_ds:
+        logging.info(f"Saving scores to {SAVE_DIR}/{to_save_ds}_katz{beta}.npy")
+        np.save(f"{SAVE_DIR}/{to_save_ds}_katz{beta}.npy", scores.toarray())
+    return scores.toarray()
+    # else:
+    #     raise NotImplementedError("Not implemented for undirected graphs.")
 
 
 def katz_0_05_vectorized(G, nodelist=None, to_save_ds=""):

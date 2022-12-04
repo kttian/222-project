@@ -19,7 +19,7 @@ meta approaches
 
 import logging
 import time
-from dataset import load_dataset_bitcoinotc
+from dataset import load_dataset_bitcoinotc, split_graph, load_dataset_collaboration
 
 import networkx as nx
 import numpy as np
@@ -83,6 +83,13 @@ def common_neighbors_vectorized(G, nodelist=None, set_diag_zero=False, to_save_d
         np.save(f"{SAVE_DIR}/{to_save_ds}_common_neighbors.npy", scores.toarray())
     return scores.toarray()
 
+def pagerank_vectorized(G, nodelist=None):
+    '''
+    Return the transition matrix used in pagerank
+    '''
+    if nodelist is None:
+        nodelist = G.nodes()
+    return np.array(nx.google_matrix(G,alpha=0.9))
 
 def jaccard_coefficient(G):
     '''
@@ -239,7 +246,18 @@ def hitting_time(G):
 
 if __name__ == '__main__':
     G, timelist = load_dataset_bitcoinotc()
-    scores = common_neighbors_vectorized(G, to_save_ds="bitcoinotc")
-    scores = katz_0_05_vectorized(G, to_save_ds="bitcoinotc")
-    # scores = jaccard_coefficient_vectorized(G, to_save_ds="bitcoinotc")
-    # scores = adamic_adar_vectorized(G, to_save_ds="bitcoinotc")
+
+    
+    G_train, G_test = split_graph(G, 0.5, timelist)
+    scores = common_neighbors_vectorized(G_train, to_save_ds="bitcoinotc_split0.5")
+    scores = katz_0_05_vectorized(G_train, to_save_ds="bitcoinotc_split0.5")
+
+    scores = jaccard_coefficient_vectorized(G_train, to_save_ds="bitcoinotc_split0.5")
+    scores = adamic_adar_vectorized(G_train, to_save_ds="bitcoinotc_split0.5")
+
+    G_train, G_test = split_graph(G, 0.8, timelist)
+    scores = jaccard_coefficient_vectorized(G_train, to_save_ds="bitcoinotc_split0.8")
+    scores = adamic_adar_vectorized(G_train, to_save_ds="bitcoinotc_split0.8")
+
+    G, timelist = load_dataset_collaboration()
+

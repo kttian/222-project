@@ -318,7 +318,8 @@ if __name__ == '__main__':
 
     # Make prediction using top n scoring edges
     # TODO: train_G and test_G might be a MultiGraph
-    new_edges = set(test_G.edges()) - set(train_G.edges())
+    # new_edges = set(test_G.edges()) - set(train_G.edges())
+    new_edges = set(test_G.subgraph(train_G.nodes()).edges()) - set(train_G.edges())
     use_top_n_edges = min(50_000, test_G.number_of_edges())
     pred_edges = prediction_vectorized(scores, train_G, use_top_n_edges=use_top_n_edges)
 

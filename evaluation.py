@@ -119,10 +119,13 @@ def prediction_vectorized(scores, train_G, use_top_n_edges=None):
 
     return pred_edges
 
+def compute_f1(pred_edges, expected_edges):
+    tp_count = len(set(pred_edges) & set(expected_edges))
+    # precision = recall = f1 in this case 
+    f1 = tp_count / len(pred_edges)
+    return f1 
+
 def prec_rec(pred_edges, expected_edges, step_size=1000):
-    print("hello")
-    print(len(pred_edges), len(expected_edges))
-    
     prec_list = []
     rec_list = []
 

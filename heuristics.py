@@ -78,9 +78,9 @@ def common_neighbors_vectorized(G, nodelist=None, set_diag_zero=False, to_save_d
     time_toc = time.perf_counter()
     logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
 
-        if to_save_ds:
-            logging.info(f"Saving scores to {SAVE_DIR}/{to_save_ds}_common_neighbors.npy")
-            np.save(f"{SAVE_DIR}/{to_save_ds}_common_neighbors.npy", scores.toarray())
+    if to_save_ds:
+        logging.info(f"Saving scores to {SAVE_DIR}/{to_save_ds}_common_neighbors.npy")
+        np.save(f"{SAVE_DIR}/{to_save_ds}_common_neighbors.npy", scores.toarray())
     return scores.toarray()
 
 

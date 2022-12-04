@@ -182,12 +182,8 @@ def plot_evaluation(predicted_edges_acc, step_size=1000, project_dir=Path.cwd(),
     fig.savefig(res_dir / f'prediction_acc-{heuristic_name}.png', dpi=300, transparent=True)
 
 
-<<<<<<< HEAD
 def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(), 
-                        dataset_name="", heuristic_name="", ymax=1):
-=======
-def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(), dataset_name="", heuristic_name="", random_drop=0.0):
->>>>>>> e9aaeb52e111f95e1c95feedbe89a687c5978099
+                        dataset_name="", heuristic_name="", random_drop=0.0, ymax=1):
     '''
     Obtain list of scores for new edges and non-edges in the test graph
     in order to compute metrics such as distance between distributions 
@@ -217,18 +213,10 @@ def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(), dataset
     negative_scores = scores.flatten()[np.where(non_edges.flatten() == 1)[1]]
 
     fig, ax = plt.subplots()
-<<<<<<< HEAD
-    ax.hist(negative_scores, bins=10000, label='non-edges', density=True, alpha=0.5)
-    ax.hist(positive_scores, bins=100, label='new edges', density=True, alpha=0.5)
-    ax.set_title(f"Score distribution - {heuristic_name}")
-    ax.set_ylim(0, ymax)
-    # ax.set_xlim(0, 20)
-=======
-    ax.hist(negative_scores, bins=100, label='non-edges')
-    ax.hist(positive_scores, bins=100, label='new edges')
+    ax.hist(negative_scores, bins=500, label='non-edges', density=True, alpha=0.7)
+    ax.hist(positive_scores, bins=100, label='new edges', density=True, alpha=0.7)
     ax.set_title(f"Score distribution - {heuristic_name} - random_drop - {random_drop}")
-    ax.set_ylim(0, 4000)
->>>>>>> e9aaeb52e111f95e1c95feedbe89a687c5978099
+    ax.set_ylim(0, ymax)
     ax.set_ylabel('frequency')
     ax.set_xlabel(f'Score')
     ax.legend()

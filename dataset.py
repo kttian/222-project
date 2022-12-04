@@ -4,6 +4,8 @@ TOOD: add links for downloading into dataset folder
 '''
 
 import datetime
+import itertools
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -107,20 +109,71 @@ def load_dataset_bitcoinotc(small=-1):
 
     return G, date_list
 
+
+def load_dataset_reddit_title(small=-1):
+    pass
+
+
+def load_dataset_reddit_body(small=-1):
+    pass
+
+
+def load_dataset_collaboration(name="astro-ph", small=-1):
+    """ Load the collaboration dataset from
+
+    Liben-Nowell, David, and Jon Kleinberg. “The Link Prediction Problem for Social Networks.” In Proceedings of the
+    Twelfth International Conference on Information and Knowledge Management, 556–59. CIKM ’03.
+    New York, NY, USA: Association for Computing Machinery, 2003. https://doi.org/10.1145/956863.956972.
+
+    :param name: Name of the dataset. Valid names are: [astro-ph.txt, cond-mat.txt, gr-qc.txt, hep-ph.txt, hep-th.txt].
+    :param small: Unused.
+    :return:
+    """
+    num_authors = 0
+    name_to_authorid = {}
+    G = nx.MultiGraph()
+
+    with open(f"dataset/collaboration/{name}.txt") as f:
+        for line in f.readlines():
+            # Obtain year of paper
+            line_split_by_space = line.split()
+            year = int(line_split_by_space[0])
+
+            # Obtain authors of paper
+            authors = line_split_by_space[1]
+            authors = authors.split("&")
+
+            # Convert author names to author ids
+            author_ids = []
+            for author in authors:
+                if author not in name_to_authorid:
+                    name_to_authorid[author] = num_authors
+                    num_authors += 1
+                author_ids.append(name_to_authorid[author])
+
+            # Add edges to graph
+            if len(author_ids) == 1:
+                G.add_node(author_ids[0])
+            else:
+                for u, v in itertools.combinations(author_ids, 2):
+                    G.add_edge(u, v, time=year)
+
+    return G
+
+
 # generic graph functions for all datasets
-def split_graph(G, time_list, split_quantile):
+def split_graph(G, split_quantile, time_list=None):
     '''
     Takes in a graph, range of times, and a split quantile (e.g. 0.5)
     Returns:
         train graph, test graph
     '''
-    # for some reason we need to apply a filter on the citations network, since 
-    # not all papers have a date 
+    # for some reason we need to apply a filter on the citations network, since not all papers have a date
     G = filter_graph(G)
     time_split = np.quantile(time_list, [split_quantile])[0]
     print("TIME SPLIT", time_split)
     train_G = graph_subset(G, start_date=np.min(time_list), end_date=time_split)
-    return train_G, G 
+    return train_G, G
 
 def split_graph_with_val(G, time_list, split_quantiles):
     '''
@@ -144,15 +197,51 @@ def filter_graph(G):
     :return:
     """
     # alternate: we could consider G.remove_nodes_from instead of subgraph
-    edge_list = [(s,t) for s,t,a in G.edges(data=True) if 'time' in a]
+    if G.is_multigraph():
+        edge_list = [(s, t, k) for s, t, k, a in G.edges(keys=True, data=True) if 'time' in a]
+    else:
+        edge_list = [(s, t) for s, t, a in G.edges(data=True) if 'time' in a]
     return G.edge_subgraph(edge_list)
 
 def graph_subset(G, start_date, end_date):
     print(start_date, end_date)
     # create graph subset containing nodes with time within given start and end 
     # (s,t,a) is a tuple of source, target, and attribute
-    edge_list = [(s,t) for s,t,a in G.edges(data=True) if start_date <= a['time'] < end_date]
+    if G.is_multigraph():
+        edge_list = [(s, t, k) for s, t, k, a in G.edges(keys=True, data=True) if start_date <= a['time'] < end_date]
+    else:
+        edge_list = [(s, t) for s, t, a in G.edges(data=True) if start_date <= a['time'] < end_date]
     return G.edge_subgraph(edge_list)
+
+
+def drop_random_edges(G, percentage, inplace=False, rng=None):
+    """ Drop random edges from graph.
+
+    :param G: A NetworkX graph.
+    :param percentage:
+    :param inplace:
+    :param rng:
+    :return:
+    """
+    assert(rng is not None)
+
+    if G.is_multigraph():
+        edge_list = list(G.edges(keys=True))
+    else:
+        edge_list = list(G.edges())
+
+    if not inplace:
+        G = G.copy()
+
+    num_edges = G.number_of_edges()
+    num_edges_to_drop = int(num_edges * percentage)
+    edges_to_drop = rng.choice(edge_list, size=num_edges_to_drop, replace=False)
+
+    G.remove_edges_from(edges_to_drop)
+
+    if not inplace:
+        return G
+
 
 def test_loading(G, timelist):
     # test loading dataset

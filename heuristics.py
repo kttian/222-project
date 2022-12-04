@@ -70,20 +70,18 @@ def common_neighbors_vectorized(G, nodelist=None, set_diag_zero=False, to_save_d
             nodelist = sorted(G.nodes())
         adj_mat = nx.adjacency_matrix(G, nodelist=nodelist)
 
-        logging.info(f"Performing large matrix multiplication")
-        time_tic = time.perf_counter()
-        scores = adj_mat.dot(adj_mat.T)
-        if set_diag_zero:
-            scores.setdiag(0)
-        time_toc = time.perf_counter()
-        logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
+    logging.info(f"Performing large matrix multiplication")
+    time_tic = time.perf_counter()
+    scores = adj_mat.dot(adj_mat.T)
+    if set_diag_zero:
+        scores.setdiag(0)
+    time_toc = time.perf_counter()
+    logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
 
         if to_save_ds:
             logging.info(f"Saving scores to {SAVE_DIR}/{to_save_ds}_common_neighbors.npy")
             np.save(f"{SAVE_DIR}/{to_save_ds}_common_neighbors.npy", scores.toarray())
-        return scores.toarray()
-    else:
-        raise NotImplementedError("Not implemented for undirected graphs.")
+    return scores.toarray()
 
 
 def jaccard_coefficient(G):

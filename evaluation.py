@@ -11,7 +11,9 @@ from pathlib import Path
 import time
 
 import networkx as nx
+import numpy as np
 import matplotlib.pyplot as plt
+
 from heuristics import *
 from dataset import *
 
@@ -153,7 +155,7 @@ def evaluation(pred_edges, expected_edges, step_size=1000):
     return predicted_edges_acc
 
 
-def plot_evaluation(predicted_edges_acc, step_size=1000, project_dir=Path.cwd(), dataset_name="", heuristic_name=""):
+def plot_evaluation(predicted_edges_acc, step_size=1000, project_dir=Path.cwd(), dataset_name="", heuristic_name="", random_drop=0.0, ylim=None):
     """ Plot the evaluation result.
     Plot the accuracy of the prediction vs top n edges
 
@@ -165,27 +167,33 @@ def plot_evaluation(predicted_edges_acc, step_size=1000, project_dir=Path.cwd(),
     :return:
     """
     # Create result directory
-    res_dir = project_dir / 'res' / dataset_name
+    res_dir = project_dir / 'res' / dataset_name / f'random_drop-{random_drop}'
     if not res_dir.exists():
         res_dir.mkdir(parents=True)
 
     # Plot the performance
     fig, ax = plt.subplots()
     ax.plot(np.arange(0, len(pred_edges), step_size), predicted_edges_acc)
-    ax.set_title(f"Prediction Accuracy - {heuristic_name}")
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    ax.set_title(f"Prediction Accuracy - {heuristic_name} - random_drop - {random_drop}")
     ax.set_ylabel('correctly predicted edges / number of new edges')
     ax.set_xlabel(f'Top n scoring edges, binned by {step_size}')
     fig.savefig(res_dir / f'prediction_acc-{heuristic_name}.png', dpi=300, transparent=True)
 
 
+<<<<<<< HEAD
 def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(), 
                         dataset_name="", heuristic_name="", ymax=1):
+=======
+def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(), dataset_name="", heuristic_name="", random_drop=0.0):
+>>>>>>> e9aaeb52e111f95e1c95feedbe89a687c5978099
     '''
     Obtain list of scores for new edges and non-edges in the test graph
     in order to compute metrics such as distance between distributions 
     '''
     # Create result directory
-    res_dir = project_dir / 'res' / dataset_name
+    res_dir = project_dir / 'res' / dataset_name / f'random_drop-{random_drop}'
     if not res_dir.exists():
         res_dir.mkdir(parents=True)
 
@@ -193,9 +201,11 @@ def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(),
     # scores = common_neighbors_vectorized(G_train, nodelist=sorted_nodes)
 
     test_adj_mat = nx.to_numpy_matrix(G_test.subgraph(sorted_nodes))
+    # test_adj_mat = nx.to_numpy_array(G_test.subgraph(sorted_nodes), nodelist=sorted_nodes)
     test_inv_adj_mat = np.logical_not(test_adj_mat).astype(int)
 
     train_adj_mat = nx.to_numpy_matrix(G_train.subgraph(sorted_nodes))
+    # train_adj_mat = nx.to_numpy_array(G_train.subgraph(sorted_nodes), nodelist=sorted_nodes)
     train_inv_adj_mat = np.logical_not(train_adj_mat).astype(int)
 
     # new edges: in test but not in train
@@ -207,11 +217,18 @@ def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(),
     negative_scores = scores.flatten()[np.where(non_edges.flatten() == 1)[1]]
 
     fig, ax = plt.subplots()
+<<<<<<< HEAD
     ax.hist(negative_scores, bins=10000, label='non-edges', density=True, alpha=0.5)
     ax.hist(positive_scores, bins=100, label='new edges', density=True, alpha=0.5)
     ax.set_title(f"Score distribution - {heuristic_name}")
     ax.set_ylim(0, ymax)
     # ax.set_xlim(0, 20)
+=======
+    ax.hist(negative_scores, bins=100, label='non-edges')
+    ax.hist(positive_scores, bins=100, label='new edges')
+    ax.set_title(f"Score distribution - {heuristic_name} - random_drop - {random_drop}")
+    ax.set_ylim(0, 4000)
+>>>>>>> e9aaeb52e111f95e1c95feedbe89a687c5978099
     ax.set_ylabel('frequency')
     ax.set_xlabel(f'Score')
     ax.legend()
@@ -238,7 +255,12 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, required=True,
                         help='dataset to load',
                         choices=[
-                            'bitcoinotc'
+                            'bitcoinotc',
+                            'collaboration_astro-ph',
+                            'collaboration_cond-mat',
+                            'collaboration_gr-qc',
+                            'collaboration_hep-ph',
+                            'collaboration_hep-th',
                         ],
                         )
     parser.add_argument('--dataset_split_quantile', type=float, default=0.5,
@@ -254,6 +276,10 @@ if __name__ == '__main__':
                             'katz-0_0005',
                         ],
                         )
+    parser.add_argument('--random_drop', type=float, default=0.0,
+                        help='fraction of edges to randomly drop from the full graph when creating the training graph')
+    parser.add_argument('--seed', type=int, default=1,
+                        help='random seed')
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -261,12 +287,27 @@ if __name__ == '__main__':
         format='%(asctime)s %(levelname)s %(filename)s %(funcName)s(%(lineno)d) %(message)s',
     )
 
+    # Set random seed
+    rng = np.random.default_rng(args.seed)
+
     # Load dataset
     if args.dataset == 'bitcoinotc':
         G, date_list = load_dataset_bitcoinotc()
+        if args.random_drop > 0:
+            train_G = drop_random_edges(G, args.random_drop, rng=rng, inplace=False)
+            test_G = G
+        else:
+            train_G, test_G = split_graph(G, args.dataset_split_quantile, time_list=date_list)
+        acc_ylim = [0, 0.05]
+    elif args.dataset.startswith('collaboration'):
+        name = args.dataset.split('_')[1]
+        G = load_dataset_collaboration(name)
+        G = filter_prolific_authors(G)
+        train_G = graph_subset(G, 1994, 1997)
+        test_G = graph_subset(G, 1994, 2000)
+        acc_ylim = [0, 0.05]
     else:
         raise ValueError(f"Unknown dataset {args.exp_name}")
-    train_G, test_G = split_graph(G, date_list, args.dataset_split_quantile)
 
     # Load heuristic function
     if args.heuristic == 'cn':
@@ -288,8 +329,9 @@ if __name__ == '__main__':
     scores = score_vectorized(train_G, heuristic_fn_vec)
 
     # Make prediction using top n scoring edges
+    # TODO: train_G and test_G might be a MultiGraph
     new_edges = set(test_G.edges()) - set(train_G.edges())
-    use_top_n_edges = min(50_000, len(test_G.edges()))
+    use_top_n_edges = min(50_000, test_G.number_of_edges())
     pred_edges = prediction_vectorized(scores, train_G, use_top_n_edges=use_top_n_edges)
 
     # Evaluate the prediction
@@ -298,6 +340,8 @@ if __name__ == '__main__':
         predicted_edges_acc,
         dataset_name=args.dataset,
         heuristic_name=args.heuristic,
+        random_drop=args.random_drop,
+        ylim=acc_ylim,
     )
     plot_pos_neg_scores(
         scores,
@@ -305,4 +349,5 @@ if __name__ == '__main__':
         test_G,
         dataset_name=args.dataset,
         heuristic_name=args.heuristic,
+        random_drop=args.random_drop,
     )

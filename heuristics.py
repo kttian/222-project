@@ -55,22 +55,19 @@ def common_neighbors_vectorized(G, nodelist=None, set_diag_zero=False):
     :return: A matrix A where A[i, j] is the number of common successors between node i and node j.
     """
 
-    if nx.is_directed(G):
-        if nodelist is None:
-            nodelist = sorted(G.nodes())
-        adj_mat = nx.adjacency_matrix(G, nodelist=nodelist)
+    if nodelist is None:
+        nodelist = sorted(G.nodes())
+    adj_mat = nx.adjacency_matrix(G, nodelist=nodelist)
 
-        logging.info(f"Performing large matrix multiplication")
-        time_tic = time.perf_counter()
-        scores = adj_mat.dot(adj_mat.T)
-        if set_diag_zero:
-            scores.setdiag(0)
-        time_toc = time.perf_counter()
-        logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
+    logging.info(f"Performing large matrix multiplication")
+    time_tic = time.perf_counter()
+    scores = adj_mat.dot(adj_mat.T)
+    if set_diag_zero:
+        scores.setdiag(0)
+    time_toc = time.perf_counter()
+    logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
 
-        return scores.toarray()
-    else:
-        raise NotImplementedError("Not implemented for undirected graphs.")
+    return scores.toarray()
 
 
 def jaccard_coefficient(G):

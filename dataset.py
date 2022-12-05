@@ -5,6 +5,7 @@ TOOD: add links for downloading into dataset folder
 
 import datetime
 import itertools
+import logging
 
 import networkx as nx
 import numpy as np
@@ -171,7 +172,7 @@ def split_graph(G, split_quantile, time_list=None):
     # for some reason we need to apply a filter on the citations network, since not all papers have a date
     G = filter_graph(G)
     time_split = np.quantile(time_list, [split_quantile])[0]
-    print("TIME SPLIT", time_split)
+    logging.info("Splitting graph at time {}".format(time_split))
     train_G = graph_subset(G, start_date=np.min(time_list), end_date=time_split)
     return train_G, G
 
@@ -188,26 +189,37 @@ def filter_graph(G):
         edge_list = [(s, t) for s, t, a in G.edges(data=True) if 'time' in a]
     return G.edge_subgraph(edge_list)
 
+
 def graph_subset(G, start_date, end_date):
-    # create graph subset containing nodes with time within given start and end 
-    # (s,t,a) is a tuple of source, target, and attribute
+    """ Choose a subset of edges in the graph according to when the edges were created (the 'time' attribute).
+
+    :param G:
+    :param start_date:
+    :param end_date:
+    :return:
+    """
+
     if G.is_multigraph():
+        # (s, t, k, a) is a tuple of source, target, key, and attribute, since there might be multiple edges from s to t
         edge_list = [(s, t, k) for s, t, k, a in G.edges(keys=True, data=True) if start_date <= a['time'] < end_date]
     else:
+        # (s, t, a) is a tuple of source, target, and attribute
         edge_list = [(s, t) for s, t, a in G.edges(data=True) if start_date <= a['time'] < end_date]
     return G.edge_subgraph(edge_list)
 
 
-def drop_random_edges(G, percentage, inplace=False, rng=None):
+def drop_random_edges(G, num_edges=None, percentage=None, inplace=False, rng=None):
     """ Drop random edges from graph.
 
     :param G: A NetworkX graph.
+    :param num_edges: Number of edges to drop.
     :param percentage:
     :param inplace:
     :param rng:
     :return:
     """
     assert(rng is not None)
+    assert((num_edges is not None or percentage is not None) and not (num_edges is not None and percentage is not None))
 
     if G.is_multigraph():
         edge_list = list(G.edges(keys=True))
@@ -217,8 +229,10 @@ def drop_random_edges(G, percentage, inplace=False, rng=None):
     if not inplace:
         G = G.copy()
 
-    num_edges = G.number_of_edges()
-    num_edges_to_drop = int(num_edges * percentage)
+    if num_edges is not None:
+        num_edges_to_drop = num_edges
+    else:
+        num_edges_to_drop = int(G.number_of_edges() * percentage)
     edges_to_drop = rng.choice(edge_list, size=num_edges_to_drop, replace=False)
 
     G.remove_edges_from(edges_to_drop)

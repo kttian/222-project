@@ -218,8 +218,8 @@ def plot_pos_neg_scores(
     max_score = max(np.max(positive_scores), np.max(negative_scores))
     min_score = min(np.min(positive_scores), np.min(negative_scores))
     bins = np.concatenate((np.linspace(min_score, max_score, 100), [max_score]))
-    ax.hist(negative_scores, bins=bins, density=True, alpha=0.5, label='non-edges')
-    ax.hist(positive_scores, bins=bins, density=True, alpha=0.5, label='new edges')
+    ax.hist(negative_scores, bins=bins, density=True, alpha=0.75, label='non-edges')
+    ax.hist(positive_scores, bins=bins, density=True, alpha=0.75, label='new edges')
     ax.set_title(f"Score distribution - {fig_name} (binsize = {bins[1] - bins[0]:.2f})")
     # ax.set_ylim(0, 1)
     ax.set_ylabel('Density')
@@ -227,14 +227,17 @@ def plot_pos_neg_scores(
     ax.legend()
     fig.savefig(res_dir / f'score_distribution-{fig_name}.png', dpi=300, transparent=True)
 
-    logging.info(f"Max positive score: {np.max(positive_scores)}")
-    logging.info(f"Min positive score: {np.min(positive_scores)}")
-    logging.info(f"Positive score mean: {np.mean(positive_scores)}")
-    logging.info(f"Positive score std: {np.std(positive_scores)}")
-    logging.info(f"Max negative score: {np.max(negative_scores)}")
-    logging.info(f"Min negative score: {np.min(negative_scores)}")
-    logging.info(f"Negative score mean: {np.mean(negative_scores)}")
-    logging.info(f"Negative score std: {np.std(negative_scores)}")
+    logging.info(f"Positive score - N:    {np.size(positive_scores)}")
+    logging.info(f"Positive score - Max:  {np.max(positive_scores)}")
+    logging.info(f"Positive score - Min:  {np.min(positive_scores)}")
+    logging.info(f"Positive score - Mean: {np.mean(positive_scores)}")
+    logging.info(f"Positive score - Std:  {np.std(positive_scores)}\n")
+
+    logging.info(f"Negative score - N:    {np.size(negative_scores)}")
+    logging.info(f"Negative score - Max:  {np.max(negative_scores)}")
+    logging.info(f"Negative score - Min:  {np.min(negative_scores)}")
+    logging.info(f"Negative score - Mean: {np.mean(negative_scores)}")
+    logging.info(f"Negative score - Std:  {np.std(negative_scores)}")
 
     # TODO: can compute any other distribution statistics on 
     # positive scores vs negative scores here

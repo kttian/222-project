@@ -52,7 +52,7 @@ def load_dataset_cit_hep_ph(small=-1):
     # load the publication dates
     # and add date as a node attribute 
     node2date = {}
-    with open('dataset/cit-HepPh-dates.txt') as f:
+    with open('datasets/cit-HepPh-dates.txt') as f:
         for line in f:
             if line[0] != '#': # ignore lines starting with #
                 node, date = line.split()
@@ -97,7 +97,7 @@ def load_dataset_bitcoinotc(small=-1):
         G: full graph, which is also the test graph
         train_G: train graphs
     '''
-    df = pd.read_csv("dataset/soc-sign-bitcoinotc.csv.gz", compression='gzip', header=None)
+    df = pd.read_csv("datasets/bitcoin/soc-sign-bitcoinotc.csv.gz", compression='gzip', header=None)
     df.columns = ['source', 'target', 'rating', 'time']
     G = nx.from_pandas_edgelist(df, source='source', target='target', edge_attr=['rating', 'time'], create_using=nx.DiGraph())
     if small > 0:
@@ -134,7 +134,7 @@ def load_dataset_collaboration(name="astro-ph", small=-1):
     name_to_authorid = {}
     G = nx.MultiGraph()
 
-    with open(f"dataset/collaboration/{name}.txt") as f:
+    with open(f"datasets/collaboration/{name}.txt") as f:
         for line in f.readlines():
             # Obtain year of paper
             line_split_by_space = line.split()
@@ -176,6 +176,21 @@ def split_graph(G, split_quantile, time_list=None):
     train_G = graph_subset(G, start_date=np.min(time_list), end_date=time_split)
     return train_G, G
 
+def split_graph_with_val(G, time_list, split_quantiles):
+    '''
+    Takes in a graph, range of times, and a split quantile (e.g. 0.5)
+    Returns:
+        train graph, val graph, test graph
+    '''
+    # for some reason we need to apply a filter on the citations network, since 
+    # not all papers have a date 
+    G = filter_graph(G)
+    time_splits = np.quantile(time_list, split_quantiles)
+    # print("TIME SPLIT", time_splits)
+    train_G = graph_subset(G, start_date=np.min(time_list), end_date=time_splits[0])
+    val_G = graph_subset(G, start_date=time_splits[0], end_date=time_splits[1])
+    return train_G, val_G, G
+
 def filter_graph(G):
     """ Filter out edges without dates.
 
@@ -199,6 +214,7 @@ def graph_subset(G, start_date, end_date):
     :return:
     """
 
+    logging.info(f"start_date: {start_date}, end_date: {end_date}")
     if G.is_multigraph():
         # (s, t, k, a) is a tuple of source, target, key, and attribute, since there might be multiple edges from s to t
         edge_list = [(s, t, k) for s, t, k, a in G.edges(keys=True, data=True) if start_date <= a['time'] < end_date]

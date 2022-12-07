@@ -209,11 +209,22 @@ def adamic_adar_vectorized(G, nodelist=None, to_save_ds=""):
     return scores
 
 
-def preferential_attachment(G):
-    '''
-    preferential attachment 
-    '''
-    return nx.preferential_attachment(G)
+def preferential_attachment_vectorized(G, nodelist=None):
+    if nodelist is None:
+        nodelist = sorted(G.nodes())
+
+    logging.info(f"Computing preferential attachment")
+    time_tic = time.perf_counter()
+
+    # Remove all weights from the adjacency matrix because we do not need them
+    adj_mat = nx.to_scipy_sparse_array(G, nodelist=nodelist, weight=None).astype(bool)
+
+    num_neighbors = adj_mat.sum(axis=1)
+    scores = np.matmul(num_neighbors[np.newaxis].T, num_neighbors[np.newaxis])
+
+    time_toc = time.perf_counter()
+    logging.info(f"Finished computing preferential attachment in {time_toc - time_tic:.2f} seconds")
+    return scores
 
 def katz(G):
     '''

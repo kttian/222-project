@@ -258,6 +258,7 @@ if __name__ == '__main__':
                             'cn',
                             'jaccard',
                             'adamic_adar',
+                            'preferential_attachment',
                             'katz-0_05',
                             'katz-0_005',
                             'katz-0_0005',
@@ -290,6 +291,8 @@ if __name__ == '__main__':
         heuristic_fn_vec = jaccard_coefficient_vectorized
     elif args.heuristic == 'adamic_adar':
         heuristic_fn_vec = adamic_adar_vectorized
+    elif args.heuristic == 'preferential_attachment':
+        heuristic_fn_vec = preferential_attachment_vectorized
     elif args.heuristic == 'katz-0_05':
         heuristic_fn_vec = katz_0_05_vectorized
     elif args.heuristic == 'katz-0_005':

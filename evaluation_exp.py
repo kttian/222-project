@@ -262,6 +262,7 @@ if __name__ == '__main__':
                             'katz-0_05',
                             'katz-0_005',
                             'katz-0_0005',
+                            'pagerank',
                         ],
                         )
     parser.add_argument('--test_no_add_nodes', action='store_true', default=False,
@@ -299,6 +300,8 @@ if __name__ == '__main__':
         heuristic_fn_vec = katz_0_005_vectorized
     elif args.heuristic == 'katz-0_0005':
         heuristic_fn_vec = katz_0_0005_vectorized
+    elif args.heuristic == 'pagerank':
+        heuristic_fn_vec = pagerank_vectorized
     else:
         raise ValueError(f"Unknown heuristic {args.heuristic}")
 

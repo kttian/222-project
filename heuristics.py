@@ -70,26 +70,31 @@ def common_neighbors_vectorized(G, nodelist=None, set_diag_zero=False, to_save_d
         nodelist = sorted(G.nodes())
     adj_mat = nx.to_scipy_sparse_array(G, nodelist=nodelist)
 
-    logging.info(f"Performing large matrix multiplication")
+    logging.info(f"Computing common neighbors")
     time_tic = time.perf_counter()
+
     scores = adj_mat.dot(adj_mat.T)
     if set_diag_zero:
         scores.setdiag(0)
+
     time_toc = time.perf_counter()
-    logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
+    logging.info(f"Finished computing common neighbors in {time_toc - time_tic} seconds")
 
     if to_save_ds:
         logging.info(f"Saving scores to {SAVE_DIR}/{to_save_ds}_common_neighbors.npy")
         np.save(f"{SAVE_DIR}/{to_save_ds}_common_neighbors.npy", scores.toarray())
+
     return scores.toarray()
+
 
 def pagerank_vectorized(G, nodelist=None):
     '''
     Return the transition matrix used in pagerank
     '''
     if nodelist is None:
-        nodelist = G.nodes()
-    return np.array(nx.google_matrix(G,alpha=0.9))
+        nodelist = sorted(G.nodes())
+    return np.array(nx.google_matrix(G, alpha=0.9, nodelist=nodelist))
+
 
 def jaccard_coefficient(G):
     '''

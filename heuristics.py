@@ -170,19 +170,35 @@ def adamic_adar_vectorized(G, nodelist=None, to_save_ds=""):
 
     if nodelist is None:
         nodelist = sorted(G.nodes())
-    nodeid_to_idx = {nodeid: idx for idx, nodeid in enumerate(nodelist)}
 
     logging.info(f"Computing Adamic/Adar coefficient")
     time_tic = time.perf_counter()
 
+    # Remove all weights from the adjacency matrix because we do not need them
+    adj_mat = nx.to_scipy_sparse_array(G, nodelist=nodelist, weight=None).astype(bool)
+
+    nodeid_to_idx = {nodeid: idx for idx, nodeid in enumerate(nodelist)}
+
+    # Precompute 1 / log(degree) for each node
+    frequencies = np.zeros(len(nodelist))
+    for nodeid in nodelist:
+        out_deg = len(list(G.neighbors(nodeid)))
+        if out_deg != 0 and out_deg != 1:
+            frequencies[nodeid_to_idx[nodeid]] = 1 / np.log(out_deg)
+
+    num_nodes = len(nodelist)
+
     scores = np.zeros((len(nodelist), len(nodelist)))
-    for u in nodelist:
-        for v in nodelist:
-            if u == v:
-                continue
-            u_neighbors = set(G.neighbors(u))
-            v_neighbors = set(G.neighbors(v))
-            scores[nodeid_to_idx[u], nodeid_to_idx[v]] = sum(1 / np.log(len(list(G.neighbors(w)))) for w in u_neighbors & v_neighbors)
+    # Each iteration deals with all nodes u and u + i
+    for i in range(1, num_nodes):
+        # Each row vector contains all the neighbors of node u
+        adj_mat_roll = sp.sparse.vstack((adj_mat[i:, :], adj_mat[:i, :]))
+        # Use multiply to simulate an element-wise AND operation
+        and_matrix = adj_mat.multiply(adj_mat_roll)
+        score = and_matrix.dot(frequencies)
+
+        for j in range(len(score)):
+            scores[j, (j + i) % num_nodes] = score[j]
 
     time_toc = time.perf_counter()
     logging.info(f"Finished computing Adamic/Adar coefficient in {time_toc - time_tic:.2f} seconds")

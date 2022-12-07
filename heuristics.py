@@ -68,7 +68,7 @@ def common_neighbors_vectorized(G, nodelist=None, set_diag_zero=False, to_save_d
 
     if nodelist is None:
         nodelist = sorted(G.nodes())
-    adj_mat = nx.adjacency_matrix(G, nodelist=nodelist)
+    adj_mat = nx.to_scipy_sparse_array(G, nodelist=nodelist)
 
     logging.info(f"Performing large matrix multiplication")
     time_tic = time.perf_counter()
@@ -115,15 +115,28 @@ def jaccard_coefficient_vectorized(G, nodelist=None, to_save_ds=""):
 
     if nodelist is None:
         nodelist = sorted(G.nodes())
-    nodeid_to_idx = {nodeid: idx for idx, nodeid in enumerate(nodelist)}
-    if nx.is_directed(G):
-        logging.info(f"Input graph is directed; converting to undirected graph")
-        G = G.to_undirected()
+
     logging.info(f"Computing Jaccard's coefficient")
     time_tic = time.perf_counter()
+
+    # Remove all weights from the adjacency matrix because we do not need them
+    adj_mat = nx.to_scipy_sparse_array(G, nodelist=nodelist, weight=None).astype(bool)
+
+    num_nodes = len(nodelist)
+
     scores = np.zeros((len(nodelist), len(nodelist)))
-    for u, v, p in nx.jaccard_coefficient(G):
-        scores[nodeid_to_idx[u], nodeid_to_idx[v]] = p
+    # Each iteration deals with all nodes u and u + i
+    for i in range(1, num_nodes):
+        # Each row vector contains all the neighbors of node u
+        adj_mat_roll = sp.sparse.vstack((adj_mat[i:, :], adj_mat[:i, :]))
+        # Use multiply to simulate an element-wise AND operation
+        and_vector = adj_mat.multiply(adj_mat_roll).sum(axis=1)
+        # Use addition to simulate an element-wise OR operation
+        or_vector = (adj_mat + adj_mat_roll).astype(bool).sum(axis=1)
+        score = np.divide(and_vector, or_vector, out=np.zeros_like(and_vector, dtype=float), where=or_vector != 0)
+        for j in range(len(score)):
+            scores[j, (j + i) % num_nodes] = score[j]
+
     time_toc = time.perf_counter()
     logging.info(f"Finished computing Jaccard's coefficient in {time_toc - time_tic:.2f} seconds")
 
@@ -158,14 +171,19 @@ def adamic_adar_vectorized(G, nodelist=None, to_save_ds=""):
     if nodelist is None:
         nodelist = sorted(G.nodes())
     nodeid_to_idx = {nodeid: idx for idx, nodeid in enumerate(nodelist)}
-    if nx.is_directed(G):
-        logging.info(f"Input graph is directed; converting to undirected graph")
-        G = G.to_undirected()
+
     logging.info(f"Computing Adamic/Adar coefficient")
     time_tic = time.perf_counter()
+
     scores = np.zeros((len(nodelist), len(nodelist)))
-    for u, v, p in nx.jaccard_coefficient(G):
-        scores[nodeid_to_idx[u], nodeid_to_idx[v]] = p
+    for u in nodelist:
+        for v in nodelist:
+            if u == v:
+                continue
+            u_neighbors = set(G.neighbors(u))
+            v_neighbors = set(G.neighbors(v))
+            scores[nodeid_to_idx[u], nodeid_to_idx[v]] = sum(1 / np.log(len(list(G.neighbors(w)))) for w in u_neighbors & v_neighbors)
+
     time_toc = time.perf_counter()
     logging.info(f"Finished computing Adamic/Adar coefficient in {time_toc - time_tic:.2f} seconds")
 
@@ -208,7 +226,7 @@ def katz_vectorized(G, beta=0.05, nodelist=None, to_save_ds="", rerun = True):
     # if nx.is_directed(G):
     if nodelist is None:
         nodelist = sorted(G.nodes())
-    adj_mat = nx.adjacency_matrix(G, nodelist=nodelist)
+    adj_mat = nx.to_scipy_sparse_array(G, nodelist=nodelist)
 
     logging.info(f"Performing large matrix multiplication")
     time_tic = time.perf_counter()

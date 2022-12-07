@@ -110,12 +110,15 @@ def prediction_vectorized(scores, train_G, use_top_n_edges=None):
     # Need to remove the edges that already exist in the train graph
     logging.info(f"Removing existing edges")
     time_tic = time.perf_counter()
+
     pred_edges = []
     for u, v in sorted_scoring_edges:
         if len(pred_edges) >= use_top_n_edges:
             break
-        if (u, v) not in train_G_edges_set:
+        # Do not predict edges that already exist in the train graph, or self-loops
+        if (u, v) not in train_G_edges_set and u != v:
             pred_edges.append((u, v))
+
     time_toc = time.perf_counter()
     logging.info(f"Removed existing edges in {time_toc - time_tic:.2f} seconds")
 
@@ -143,28 +146,24 @@ def plot_evaluation(
         acc_temporal,
         acc_random,
         step_size=1000,
-        project_dir=Path.cwd(),
-        dataset_name="",
+        res_dir=None,
         heuristic_name="",
         dataset_split_quantile=0.0,
-        ylim=None
+        ylim=None,
 ):
     """ Plot the evaluation result.
     Plot the accuracy of the prediction vs top n edges
 
-    :param predicted_edges_acc:
+    :param acc_temporal:
+    :param acc_random:
     :param step_size:
-    :param project_dir:
-    :param dataset_name:
+    :param res_dir:
     :param heuristic_name:
-    :return:
+    :param dataset_split_quantile:
+    :param ylim:
     """
     assert(isinstance(acc_random, list))
-
-    # Create result directory
-    res_dir = project_dir / 'res' / dataset_name / f'split-{dataset_split_quantile}'
-    if not res_dir.exists():
-        res_dir.mkdir(parents=True)
+    assert(res_dir is not None)
 
     # Plot the performance
     fig, ax = plt.subplots()
@@ -184,19 +183,14 @@ def plot_pos_neg_scores(
         scores,
         G_train,
         G_test,
-        project_dir=Path.cwd(),
-        dataset_name="",
-        dataset_split_quantile=0.0,
+        res_dir=None,
         fig_name="",
 ):
     '''
     Obtain list of scores for new edges and non-edges in the test graph
     in order to compute metrics such as distance between distributions 
     '''
-    # Create result directory
-    res_dir = project_dir / 'res' / dataset_name / f'split-{dataset_split_quantile}'
-    if not res_dir.exists():
-        res_dir.mkdir(parents=True)
+    assert (res_dir is not None)
 
     sorted_nodes = np.array(sorted(G_train.nodes()))
 
@@ -269,6 +263,8 @@ if __name__ == '__main__':
                             'katz-0_0005',
                         ],
                         )
+    parser.add_argument('--test_no_add_nodes', action='store_true', default=False,
+                        help='whether to test on the same nodes as the training set')
     parser.add_argument('--num_seeds', type=int, default=10,
                         help='number of seeds to use for random cut',
                         )
@@ -278,6 +274,14 @@ if __name__ == '__main__':
         level=logging.INFO,
         format='%(asctime)s %(levelname)s %(filename)s %(funcName)s(%(lineno)d) %(message)s',
     )
+
+    # Create result directory
+    split_folder_name = f'split-{args.dataset_split_quantile}'
+    if args.test_no_add_nodes:
+        split_folder_name = 'same_nodes-' + split_folder_name
+    res_dir = Path.cwd() / 'res' / args.dataset / split_folder_name
+    if not res_dir.exists():
+        res_dir.mkdir(parents=True)
 
     # Load heuristic function
     if args.heuristic == 'cn':
@@ -308,6 +312,9 @@ if __name__ == '__main__':
     else:
         raise ValueError(f"Unknown dataset {args.exp_name}")
 
+    if args.test_no_add_nodes:
+        test_G = nx.subgraph(test_G, train_G.nodes)
+
     num_dropped_edges_for_temporal = test_G.number_of_edges() - train_G.number_of_edges()
     logging.info(f"Number of dropped edges for temporal cut: {num_dropped_edges_for_temporal}")
 
@@ -320,14 +327,13 @@ if __name__ == '__main__':
     # TODO: train_G and test_G might be a MultiGraph
     new_edges = set(test_G.edges()) - set(train_G.edges())
     acc_temporal = evaluation(pred_edges, new_edges)
-    plot_pos_neg_scores(
-        scores,
-        train_G,
-        test_G,
-        dataset_name=args.dataset,
-        dataset_split_quantile=args.dataset_split_quantile,
-        fig_name=f'{args.heuristic}-temporal',
-    )
+    # plot_pos_neg_scores(
+    #     scores,
+    #     train_G,
+    #     test_G,
+    #     res_dir=res_dir,
+    #     fig_name=f'{args.heuristic}-temporal',
+    # )
 
     # Obtain scores with train graph created by random cuts
     acc_random = []
@@ -344,17 +350,17 @@ if __name__ == '__main__':
     plot_evaluation(
         acc_temporal,
         acc_random,
-        dataset_name=args.dataset,
+        res_dir=res_dir,
         heuristic_name=args.heuristic,
         dataset_split_quantile=args.dataset_split_quantile,
     )
 
     # Plot pos neg scores of random cut
-    plot_pos_neg_scores(
-        scores,
-        train_G,
-        test_G,
-        dataset_name=args.dataset,
-        dataset_split_quantile=args.dataset_split_quantile,
-        fig_name=f'{args.heuristic}-random',
-    )
+    # plot_pos_neg_scores(
+    #     scores,
+    #     train_G,
+    #     test_G,
+    #     dataset_name=args.dataset,
+    #     dataset_split_quantile=args.dataset_split_quantile,
+    #     fig_name=f'{args.heuristic}-random',
+    # )

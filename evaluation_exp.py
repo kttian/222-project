@@ -233,6 +233,9 @@ def plot_pos_neg_scores(
     logging.info(f"Negative score - Mean: {np.mean(negative_scores)}")
     logging.info(f"Negative score - Std:  {np.std(negative_scores)}")
 
+    # Print for easy copying to LaTeX
+    print(f"{np.mean(positive_scores):0.5f} & {np.mean(negative_scores):0.5f} & {np.std(positive_scores):0.5f} & {np.std(negative_scores):0.5f} \\\\")
+
     # TODO: can compute any other distribution statistics on 
     # positive scores vs negative scores here
 
@@ -333,13 +336,13 @@ if __name__ == '__main__':
     # TODO: train_G and test_G might be a MultiGraph
     new_edges = set(test_G.edges()) - set(train_G.edges())
     acc_temporal = evaluation(pred_edges, new_edges)
-    # plot_pos_neg_scores(
-    #     scores,
-    #     train_G,
-    #     test_G,
-    #     res_dir=res_dir,
-    #     fig_name=f'{args.heuristic}-temporal',
-    # )
+    plot_pos_neg_scores(
+        scores,
+        train_G,
+        test_G,
+        res_dir=res_dir,
+        fig_name=f'{args.heuristic}-temporal',
+    )
 
     # Obtain scores with train graph created by random cuts
     acc_random = []
@@ -362,11 +365,10 @@ if __name__ == '__main__':
     )
 
     # Plot pos neg scores of random cut
-    # plot_pos_neg_scores(
-    #     scores,
-    #     train_G,
-    #     test_G,
-    #     dataset_name=args.dataset,
-    #     dataset_split_quantile=args.dataset_split_quantile,
-    #     fig_name=f'{args.heuristic}-random',
-    # )
+    plot_pos_neg_scores(
+        scores,
+        train_G,
+        test_G,
+        res_dir=res_dir,
+        fig_name=f'{args.heuristic}-random',
+    )

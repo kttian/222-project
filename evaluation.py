@@ -147,8 +147,8 @@ def evaluation(pred_edges, expected_edges, step_size=1000):
     :param step_size:
     :return:
     """
-    print("hello")
-    print(len(pred_edges), len(expected_edges))
+    # print("hello")
+    # print(len(pred_edges), len(expected_edges))
     all_correct_pred_edges = set(pred_edges) & set(expected_edges)
     num_of_correctly_predicted_edges = []
     for i in range(0, len(pred_edges), step_size):
@@ -183,6 +183,7 @@ def plot_evaluation(predicted_edges_acc, step_size=1000, project_dir=Path.cwd(),
     ax.set_ylabel('correctly predicted edges / number of new edges')
     ax.set_xlabel(f'Top n scoring edges, binned by {step_size}')
     fig.savefig(res_dir / f'prediction_acc-{heuristic_name}.png', dpi=300, transparent=True)
+    print("F1", dataset_name, heuristic_name, predicted_edges_acc[-1])
 
 
 def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(), 
@@ -292,7 +293,7 @@ if __name__ == '__main__':
         acc_ylim = [0, 0.05]
     elif args.dataset.startswith('collaboration'):
         name = args.dataset.split('_')[1]
-        G = load_dataset_collaboration(name)
+        G, timelist = load_dataset_collaboration(name)
         G = filter_prolific_authors(G)
         train_G = graph_subset(G, 1994, 1997)
         test_G = graph_subset(G, 1994, 2000)
@@ -335,11 +336,11 @@ if __name__ == '__main__':
         random_drop=args.random_drop,
         ylim=acc_ylim,
     )
-    plot_pos_neg_scores(
-        scores,
-        train_G,
-        test_G,
-        dataset_name=args.dataset,
-        heuristic_name=args.heuristic,
-        random_drop=args.random_drop,
-    )
+    # plot_pos_neg_scores(
+    #     scores,
+    #     train_G,
+    #     test_G,
+    #     dataset_name=args.dataset,
+    #     heuristic_name=args.heuristic,
+    #     random_drop=args.random_drop,
+    # )

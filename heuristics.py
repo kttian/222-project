@@ -87,13 +87,20 @@ def common_neighbors_vectorized(G, nodelist=None, set_diag_zero=False, to_save_d
     return scores.toarray()
 
 
-def pagerank_vectorized(G, nodelist=None):
+def pagerank_vectorized(G, nodelist=None, to_save_ds="", rerun=True):
     '''
     Return the transition matrix used in pagerank
     '''
+    if not rerun and os.path.exists(os.path.join(SAVE_DIR, f"{to_save_ds}_pagerank.npy")):
+        logging.info(f"Loading scores from {SAVE_DIR}/{to_save_ds}_pagerank.npy")
+        return np.load(os.path.join(SAVE_DIR, f"{to_save_ds}_pagerank.npy"))
     if nodelist is None:
         nodelist = sorted(G.nodes())
-    return np.array(nx.google_matrix(G, alpha=0.9, nodelist=nodelist))
+    scores = np.array(nx.google_matrix(G, alpha=0.9, nodelist=nodelist))
+    if to_save_ds:
+        logging.info(f"Saving scores to {SAVE_DIR}/{to_save_ds}_pagerank.npy")
+        np.save(f"{SAVE_DIR}/{to_save_ds}_pagerank.npy", scores)
+    return scores 
 
 
 def jaccard_coefficient(G):
@@ -275,16 +282,20 @@ def katz_vectorized(G, beta=0.05, nodelist=None, to_save_ds="", rerun = True):
     #     raise NotImplementedError("Not implemented for undirected graphs.")
 
 
-def katz_0_05_vectorized(G, nodelist=None, to_save_ds=""):
-    return katz_vectorized(G, beta=0.05, nodelist=nodelist, to_save_ds=to_save_ds)
+def katz_0_1_vectorized(G, nodelist=None, to_save_ds="",rerun=True):
+    return katz_vectorized(G, beta=0.1, nodelist=nodelist, to_save_ds=to_save_ds, rerun=rerun)
 
+def katz_0_05_vectorized(G, nodelist=None, to_save_ds="",rerun=True):
+    return katz_vectorized(G, beta=0.05, nodelist=nodelist, to_save_ds=to_save_ds, rerun=rerun)
 
-def katz_0_005_vectorized(G, nodelist=None):
-    return katz_vectorized(G, beta=0.005, nodelist=nodelist)
+def katz_0_01_vectorized(G, nodelist=None, to_save_ds="",rerun=True):
+    return katz_vectorized(G, beta=0.01, nodelist=nodelist, to_save_ds=to_save_ds, rerun=rerun)
 
+def katz_0_005_vectorized(G, nodelist=None,to_save_ds="", rerun=True):
+    return katz_vectorized(G, beta=0.005, nodelist=nodelist,to_save_ds=to_save_ds,rerun=rerun)
 
-def katz_0_0005_vectorized(G, nodelist=None):
-    return katz_vectorized(G, beta=0.0005, nodelist=nodelist)
+def katz_0_0005_vectorized(G, nodelist=None, to_save_ds="", rerun=True):
+    return katz_vectorized(G, beta=0.0005, nodelist=nodelist, to_save_ds=to_save_ds, rerun=rerun)
 
 
 def hitting_time(G):
@@ -297,7 +308,6 @@ def hitting_time(G):
 if __name__ == '__main__':
     G, timelist = load_dataset_bitcoinotc()
 
-    
     G_train, G_test = split_graph(G, 0.5, timelist)
     scores = common_neighbors_vectorized(G_train, to_save_ds="bitcoinotc_split0.5")
     scores = katz_0_05_vectorized(G_train, to_save_ds="bitcoinotc_split0.5")

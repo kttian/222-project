@@ -91,13 +91,15 @@ def filter_prolific_authors(G, kappa=3):
 # Nodes	5,881 Edges	35,592
 # Range of edge weight	-10 to +10
 # Percentage of positive edges	89%
-def load_dataset_bitcoinotc(small=-1):
+# TODO: change function name from load_dataset_bitcoinotc to load_dataset_bitcoin
+def load_dataset_bitcoinotc(name="otc", small=-1):
     '''
+    name: "otc" or "alpha"
     Returns:
         G: full graph, which is also the test graph
         train_G: train graphs
     '''
-    df = pd.read_csv("datasets/bitcoin/soc-sign-bitcoinotc.csv.gz", compression='gzip', header=None)
+    df = pd.read_csv(f"datasets/bitcoin/soc-sign-bitcoin{name}.csv.gz", compression='gzip', header=None)
     df.columns = ['source', 'target', 'rating', 'time']
     G = nx.from_pandas_edgelist(df, source='source', target='target', edge_attr=['rating', 'time'], create_using=nx.DiGraph())
     if small > 0:
@@ -119,7 +121,7 @@ def load_dataset_reddit_body(small=-1):
     pass
 
 
-def load_dataset_collaboration(name="astro-ph", small=-1):
+def load_dataset_collaboration(name="astro-ph", OFFSET=0, small=-1):
     """ Load the collaboration dataset from
 
     Liben-Nowell, David, and Jon Kleinberg. “The Link Prediction Problem for Social Networks.” In Proceedings of the
@@ -134,8 +136,6 @@ def load_dataset_collaboration(name="astro-ph", small=-1):
     name_to_authorid = {}
     G = nx.MultiGraph()
     datelist = []
-
-    OFFSET = 10000
     
     with open(f"datasets/collaboration/{name}.txt") as f:
         for line in f.readlines():
@@ -143,8 +143,11 @@ def load_dataset_collaboration(name="astro-ph", small=-1):
             line_split_by_space = line.split()
 
             # compute a random offset from the year to make the dates more spread out
-            random_offset = np.random.randint(0, OFFSET)
-            year = int(line_split_by_space[0]) * OFFSET + random_offset
+            year = int(line_split_by_space[0])
+            if OFFSET > 0:
+                random_offset = np.random.randint(0, OFFSET)
+                year = year * OFFSET*10 + random_offset
+            
             datelist.append(year)
 
             # Obtain authors of paper
@@ -179,7 +182,7 @@ def split_graph(G, split_quantile, time_list=None):
     # for some reason we need to apply a filter on the citations network, since not all papers have a date
     G = filter_graph(G)
     time_split = np.quantile(time_list, [split_quantile])[0]
-    logging.info("Splitting graph at time {}".format(time_split))
+    logging.info("Splitting graph at time < {}".format(time_split))
     train_G = graph_subset(G, start_date=np.min(time_list), end_date=time_split)
     return train_G, G
 

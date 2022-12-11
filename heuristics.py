@@ -80,7 +80,7 @@ def common_neighbors_vectorized(G, nodelist=None, set_diag_zero=False, to_save_d
     time_toc = time.perf_counter()
     logging.info(f"Finished computing common neighbors in {time_toc - time_tic} seconds")
 
-    if to_save_ds:
+    if to_save_ds != "":
         logging.info(f"Saving scores to {SAVE_DIR}/{to_save_ds}_common_neighbors.npy")
         np.save(f"{SAVE_DIR}/{to_save_ds}_common_neighbors.npy", scores.toarray())
 
@@ -110,7 +110,7 @@ def jaccard_coefficient(G):
     return nx.jaccard_coefficient(G)
 
 
-def jaccard_coefficient_vectorized(G, nodelist=None, to_save_ds=""):
+def jaccard_coefficient_vectorized(G, nodelist=None, to_save_ds="", rerun=True):
     """ Computes Jaccard's coefficient as defined in:
 
     Liben-Nowell, David, and Jon Kleinberg. “The Link Prediction Problem for Social Networks.” In Proceedings of the
@@ -121,7 +121,7 @@ def jaccard_coefficient_vectorized(G, nodelist=None, to_save_ds=""):
     :param nodelist:
     :return: scores, a matrix where scores[i, j] is the Jaccard's coefficient between node i and node j
     """
-    if os.path.exists(os.path.join(SAVE_DIR, f"{to_save_ds}_jaccard.npy")):
+    if not rerun and os.path.exists(os.path.join(SAVE_DIR, f"{to_save_ds}_jaccard.npy")):
         logging.info(f"Loading scores from {SAVE_DIR}/{to_save_ds}_jaccard.npy")
         return np.load(os.path.join(SAVE_DIR, f"{to_save_ds}_jaccard.npy"))
 
@@ -165,7 +165,7 @@ def adamic_adar(G):
     return nx.adamic_adar_index(G)
 
 
-def adamic_adar_vectorized(G, nodelist=None, to_save_ds=""):
+def adamic_adar_vectorized(G, nodelist=None, to_save_ds="", rerun=True):
     """ Computes Adamic/Adar index as defined in:
 
         Liben-Nowell, David, and Jon Kleinberg. “The Link Prediction Problem for Social Networks.” In Proceedings of the
@@ -176,7 +176,7 @@ def adamic_adar_vectorized(G, nodelist=None, to_save_ds=""):
         :param nodelist:
         :return:
         """
-    if os.path.exists(os.path.join(SAVE_DIR, f"{to_save_ds}_adamic_adar.npy")):
+    if not rerun and os.path.exists(os.path.join(SAVE_DIR, f"{to_save_ds}_adamic_adar.npy")):
         logging.info(f"Loading scores from {SAVE_DIR}/{to_save_ds}_adamic_adar.npy")
         return np.load(os.path.join(SAVE_DIR, f"{to_save_ds}_adamic_adar.npy"))
 
@@ -215,7 +215,7 @@ def adamic_adar_vectorized(G, nodelist=None, to_save_ds=""):
     time_toc = time.perf_counter()
     logging.info(f"Finished computing Adamic/Adar coefficient in {time_toc - time_tic:.2f} seconds")
 
-    if to_save_ds:
+    if to_save_ds != "":
         logging.info(f"Saving scores to {SAVE_DIR}/{to_save_ds}_adamic_adar.npy")
         np.save(f"{SAVE_DIR}/{to_save_ds}_adamic_adar.npy", scores)
     return scores
@@ -274,7 +274,7 @@ def katz_vectorized(G, beta=0.05, nodelist=None, to_save_ds="", rerun = True):
     time_toc = time.perf_counter()
     logging.info(f"Finished large matrix multiplication in {time_toc - time_tic:.2f} seconds")
 
-    if to_save_ds:
+    if to_save_ds != "":
         logging.info(f"Saving scores to {SAVE_DIR}/{to_save_ds}_katz{beta}.npy")
         np.save(f"{SAVE_DIR}/{to_save_ds}_katz{beta}.npy", scores.toarray())
     return scores.toarray()

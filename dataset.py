@@ -133,12 +133,19 @@ def load_dataset_collaboration(name="astro-ph", small=-1):
     num_authors = 0
     name_to_authorid = {}
     G = nx.MultiGraph()
+    datelist = []
 
+    OFFSET = 10000
+    
     with open(f"datasets/collaboration/{name}.txt") as f:
         for line in f.readlines():
             # Obtain year of paper
             line_split_by_space = line.split()
-            year = int(line_split_by_space[0])
+
+            # compute a random offset from the year to make the dates more spread out
+            random_offset = np.random.randint(0, OFFSET)
+            year = int(line_split_by_space[0]) * OFFSET + random_offset
+            datelist.append(year)
 
             # Obtain authors of paper
             authors = line_split_by_space[1]
@@ -159,7 +166,7 @@ def load_dataset_collaboration(name="astro-ph", small=-1):
                 for u, v in itertools.combinations(author_ids, 2):
                     G.add_edge(u, v, time=year)
 
-    return G
+    return G, datelist
 
 
 # generic graph functions for all datasets

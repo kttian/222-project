@@ -228,8 +228,8 @@ def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(),
 
     mu0 = np.mean(negative_scores)
     mu1 = np.mean(positive_scores)
-    sigma0 = np.std(negative_scores)
-    sigma1 = np.std(positive_scores)
+    sigma0 = np.std(negative_scores, ddof=1)
+    sigma1 = np.std(positive_scores, ddof=1)
     n0 = np.size(negative_scores)
     n1 = np.size(positive_scores)
     dist = (mu1 - mu0) / np.sqrt(sigma0**2/n0 + sigma1**2/n1)
@@ -245,13 +245,13 @@ def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(),
     logging.info(f"Positive score - Max:  {np.max(positive_scores)}")
     logging.info(f"Positive score - Min:  {np.min(positive_scores)}")
     logging.info(f"Positive score - Mean: {np.mean(positive_scores)}")
-    logging.info(f"Positive score - Std:  {np.std(positive_scores)}\n")
+    logging.info(f"Positive score - Std:  {np.std(positive_scores)}, sample {sigma1}\n")
 
     logging.info(f"Negative score - N:    {np.size(negative_scores)}")
     logging.info(f"Negative score - Max:  {np.max(negative_scores)}")
     logging.info(f"Negative score - Min:  {np.min(negative_scores)}")
     logging.info(f"Negative score - Mean: {np.mean(negative_scores)}")
-    logging.info(f"Negative score - Std:  {np.std(negative_scores)}")
+    logging.info(f"Negative score - Std:  {np.std(negative_scores)}, sample {sigma0}")
 
     # TODO: can compute any other distribution statistics on 
     # positive scores vs negative scores here

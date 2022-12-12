@@ -3,18 +3,22 @@ from heuristics import *
 from evaluation import *
 import time 
 
-namelist = ["astro-ph", "cond-mat", "hep-th", "hep-ph", "gr-qc", "bitcoin-otc", "bitcoin-alpha"]
+namelist = ["astro-ph", "cond-mat", "hep-th", "hep-ph", "gr-qc", "bitcoin-otc", "bitcoin-alpha", "amazon"]
 # namelist = ["bitcoin-alpha"]
+namelist = ["amazon"]
 metric_list = [""]
 split = 0.5
 
 start_time = time.perf_counter()
 for name in namelist:
-    if name == "bitcoin-otc" or name == "bitcoin-alpha":
-        G, date_list = load_dataset_bitcoinotc(name=name.split("-")[1])
+    if name == "amazon":
+        train_G, test_G = load_dataset_amazon_split(reduction=10)
     else:
-        G, date_list = load_dataset_collaboration(name=name,OFFSET=0)
-    train_G, test_G = split_graph(G, split, date_list)
+        if name == "bitcoin-otc" or name == "bitcoin-alpha":
+            G, date_list = load_dataset_bitcoinotc(name=name.split("-")[1])
+        else:
+            G, date_list = load_dataset_collaboration(name=name,OFFSET=0)
+        train_G, test_G = split_graph(G, split, date_list)
     sorted_nodes = sorted(train_G.nodes())
 
     # for testing 
@@ -27,6 +31,7 @@ for name in namelist:
     save_name = ""
     rerun = True
 
+    print(f"loading data done, {time.perf_counter() - start_time:.2f}s")
     # s_edges = len(new_edges)
     # s_nodes = len(train_G.nodes()) ** 2 
     # print(f"{name}: test edges {s_edges}, nodes^2 {s_nodes}, ratio {s_edges/(s_nodes-s_edges):.3f}%")
@@ -51,7 +56,7 @@ for name in namelist:
     score_list.append(("adamic", adamic_adar_vectorized(train_G, sorted_nodes, to_save_ds=save_name, rerun=rerun)))
     print(f"adamic done, {time.perf_counter() - start_time:.2f}s")
     score_list.append(("pref_a", preferential_attachment_vectorized(train_G, sorted_nodes)))
-    print(f"pref_a done. {time.perf_counter() - start_time:.2f}s")
+    print(f"pref_a done, {time.perf_counter() - start_time:.2f}s")
 
     # score_list.append(("pagerank", pagerank_vectorized(train_G, sorted_nodes,to_save_ds=save_name, rerun=rerun)))
 
@@ -63,3 +68,5 @@ for name in namelist:
         f1 = compute_f1(pred_edges, new_edges)
 
         print(f"data {name}, score {scores[0]}, f1 {f1:.8f}")
+
+print(f"all done, {time.perf_counter() - start_time:.2f}s")

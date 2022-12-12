@@ -226,6 +226,21 @@ def plot_pos_neg_scores(scores, G_train, G_test, project_dir=Path.cwd(),
     ax.legend()
     fig.savefig(res_dir / f'score_distribution-{heuristic_name}.png', dpi=300, transparent=True)
 
+    mu0 = np.mean(negative_scores)
+    mu1 = np.mean(positive_scores)
+    sigma0 = np.std(negative_scores)
+    sigma1 = np.std(positive_scores)
+    n0 = np.size(negative_scores)
+    n1 = np.size(positive_scores)
+    dist = (mu1 - mu0) / np.sqrt(sigma0**2/n0 + sigma1**2/n1)
+    logging.info(f"Distance between distributions: {dist}")
+    print(f"Distance between distributions: {dist}")
+
+    dist = (mu1 - mu0) / np.sqrt(sigma0**2 + sigma1**2)
+    logging.info(f"Distance between distributions (not adj by n): {dist}")
+    print(f"Distance between distributions (not adj by n): {dist}")
+
+
     logging.info(f"Positive score - N:    {np.size(positive_scores)}")
     logging.info(f"Positive score - Max:  {np.max(positive_scores)}")
     logging.info(f"Positive score - Min:  {np.min(positive_scores)}")

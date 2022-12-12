@@ -42,7 +42,7 @@ def load_dataset_cit_hep_ph(small=-1):
     '''
     # load the edges into a directed graph (DiGraph)
     # TODO: add support for .gz files 
-    G = nx.read_edgelist('dataset/cit-HepPh.txt', create_using=nx.DiGraph(),
+    G = nx.read_edgelist('datasets/citation/cit-HepPh.txt', create_using=nx.DiGraph(),
                          comments='#', nodetype=int, data=True)
     
     if small > 0:
@@ -112,6 +112,22 @@ def load_dataset_bitcoinotc(name="otc", small=-1):
 
     return G, date_list
 
+def load_dataset_amazon_split(reduction=10,seed=None):        
+    G_train = nx.read_edgelist('datasets/amazon/amazon0302.txt.gz', create_using=nx.DiGraph(),
+                         comments='#', nodetype=int, data=True)
+    G_test = nx.read_edgelist('datasets/amazon/amazon0601.txt.gz', create_using=nx.DiGraph(),
+                            comments='#', nodetype=int, data=True)
+    node_list = list(G_train.nodes)
+    # if seed provided, pick random 1/reduction nodes
+    # if not, pick first 1/reduction nodes
+    if seed:
+        np.random.seed(seed)
+        np.random.shuffle(node_list)
+    random_nodes = node_list[:int(len(G_train.nodes())/reduction)]
+    G_train = G_train.subgraph(random_nodes)
+    G_test = G_test.subgraph(G_train.nodes())
+    return G_train, G_test 
+
 
 def load_dataset_reddit_title(small=-1):
     pass
@@ -136,7 +152,7 @@ def load_dataset_collaboration(name="astro-ph", OFFSET=0, small=-1):
     name_to_authorid = {}
     G = nx.MultiGraph()
     datelist = []
-    
+    np.random.seed(OFFSET)
     with open(f"datasets/collaboration/{name}.txt") as f:
         for line in f.readlines():
             # Obtain year of paper
@@ -182,7 +198,7 @@ def split_graph(G, split_quantile, time_list=None):
     # for some reason we need to apply a filter on the citations network, since not all papers have a date
     G = filter_graph(G)
     time_split = np.quantile(time_list, [split_quantile])[0]
-    logging.info("Splitting graph at time < {}".format(time_split))
+    print("Splitting graph at time < {}".format(time_split))
     train_G = graph_subset(G, start_date=np.min(time_list), end_date=time_split)
     return train_G, G
 
